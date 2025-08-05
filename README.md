@@ -7,6 +7,7 @@ This project is a RAG (Retrieval-Augmented Generation) application that function
 - **Document-based Q&A:** Answers questions based on the content of documents stored in the `documents` directory.
 - **Multi-format Document Support:** Can process both PDF (.pdf) and Microsoft Word (.docx) files.
 - **Vector-based Retrieval:** Utilizes the `text-embedding-3-small` model from OpenAI to create vector embeddings of the document text, enabling efficient similarity search.
+- **Graph-based Retrieval:** Creates a graph of related text chunks to provide more contextually relevant information.
 - **FAISS Vector Store:** Stores the vector embeddings in a [FAISS](https://github.com/facebookresearch/faiss) index for fast retrieval.
 - **Dual LLM Support:** Offers the flexibility to use either a local LLaMA model (via Ollama) or the OpenAI API for generating answers.
 - **Easy-to-use API:** Provides a simple API for asking questions and for triggering the document embedding process.
@@ -23,6 +24,7 @@ This project is a RAG (Retrieval-Augmented Generation) application that function
 ├── Services
 │   └── AIService.py
 ├── VectorStore
+│   ├── graphDB.graphml
 │   ├── textList.json
 │   └── vectorDB.faiss
 ├── main.py
@@ -35,7 +37,6 @@ This project is a RAG (Retrieval-Augmented Generation) application that function
 ### Prerequisites
 
 - Python 3.7+
-- UV project manager
 - An Azure OpenAI API key and endpoint
 - (Optional) [Ollama](https://ollama.ai/) installed and running for local LLM support
 
@@ -83,7 +84,7 @@ This project is a RAG (Retrieval-Augmented Generation) application that function
 3. **Run the application:**
 
    ```bash
-   uv run ./main.py
+   uv run main.py
    ```
 
 4. **Access the API:**
@@ -122,8 +123,12 @@ This project is a RAG (Retrieval-Augmented Generation) application that function
 
 3. **Vector Storage:** The vector embeddings are stored in a FAISS index (`vectorDB.faiss`), and the corresponding text chunks are saved in a JSON file (`textList.json`).
 
-4. **Question Answering:**
+4. **Graph Creation:** A graph is created where each node is a text chunk, and an edge is created between two nodes if their cosine similarity is above a certain threshold. This graph is stored in a GraphML file (`graphDB.graphml`).
+
+5. **Question Answering:**
    - When a question is received, the application creates a vector embedding of the question.
    - It then uses the FAISS index to find the most similar text chunks from the documents.
+   - For each of the top-k similar chunks, it also retrieves its neighbors from the graph to provide more context.
    - These relevant text chunks are then combined with the original question to form a prompt.
    - Finally, the prompt is sent to either the local LLaMA model or the OpenAI API to generate a response.
+
