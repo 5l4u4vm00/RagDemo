@@ -107,11 +107,11 @@ class AIService:
         threshold = 0.65
         similarities = cosine_similarity(embeddings)
         G = nx.DiGraph()
-        # 加入節點
+        # Add node
         for i, chunk in enumerate(chunkTexts):
             G.add_node(i, text=chunk)
 
-        # 加入順序邊
+        # Add edage
         for i in range(len(chunkTexts)):
             for j in range(i + 1, len(chunkTexts)):
                 sim = similarities[i][j]

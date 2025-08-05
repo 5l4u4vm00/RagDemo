@@ -36,7 +36,7 @@ This project is a RAG (Retrieval-Augmented Generation) application that function
 
 ### Prerequisites
 
-- Python 3.7+
+- Python 3.12.5+
 - An Azure OpenAI API key and endpoint
 - (Optional) [Ollama](https://ollama.ai/) installed and running for local LLM support
 
@@ -131,4 +131,3 @@ This project is a RAG (Retrieval-Augmented Generation) application that function
    - For each of the top-k similar chunks, it also retrieves its neighbors from the graph to provide more context.
    - These relevant text chunks are then combined with the original question to form a prompt.
    - Finally, the prompt is sent to either the local LLaMA model or the OpenAI API to generate a response.
-
