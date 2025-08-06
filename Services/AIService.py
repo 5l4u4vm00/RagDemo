@@ -12,6 +12,9 @@ from ollama import ChatResponse
 from openai.types.chat.completion_create_params import ChatCompletionMessageParam
 from docx import Document
 from sklearn.metrics.pairwise import cosine_similarity
+from transformers import AutoTokenizer, AutoModel
+import torch.nn.functional as F
+from torch import Tensor
 
 load_dotenv()
 _openAIKey = os.environ.get("AZURE_OPENAI_KEY")
@@ -20,16 +23,15 @@ _faissPath = "./VectorStore/vectorDB.faiss"
 _jsonPath = "./VectorStore/textList.json"
 _nxPath = "./VectorStore/graphDB.graphml"
 _documentPath = "./documents/"
+_tokenizer = AutoTokenizer.from_pretrained("intfloat/multilingual-e5-large")
+_embeddingModel = AutoModel.from_pretrained("intfloat/multilingual-e5-large")
 
-if not _openAIKey:
-    raise ValueError("⚠️ 環境變數 AZURE_OPENAI_KEY 尚未設定")
-
-if not _openAIEndpoint:
-    raise ValueError("⚠️ 環境變數 AZURE_OPENAI_ENDPOINT 尚未設定")
-
-_openAIClient = AzureOpenAI(
-    azure_endpoint=_openAIEndpoint, api_key=_openAIKey, api_version="2024-05-01-preview"
-)
+if _openAIKey and _openAIEndpoint:
+    _openAIClient = AzureOpenAI(
+        azure_endpoint=_openAIEndpoint,
+        api_key=_openAIKey,
+        api_version="2024-05-01-preview",
+    )
 
 
 class AIService:
@@ -54,6 +56,8 @@ class AIService:
         """
         Ask question to openai model
         """
+        if not _openAIClient:
+            return "Please set the azure openai key and endpoint in .env"
         prompts = self.SimilarQueryAndReturnPrompts(user_input, top_k=2)
         messages = self.messages.copy()
         messages.append({"role": "user", "content": prompts})
@@ -159,12 +163,24 @@ class AIService:
 
         return chunks
 
+    @classmethod
+    def EmbeddingText(cls, texts: list[str]) -> list[list[float]]:
+        inputs = _tokenizer(
+            texts, padding=True, max_length=512, truncation=True, return_tensors="pt"
+        )
+        outputs = _embeddingModel(**inputs)
+        embeddings = cls.AveragePool(
+            outputs.last_hidden_state, inputs["attention_mask"]
+        )
+        embeddings = F.normalize(embeddings, p=2, dim=1)
+        return embeddings.tolist()
+
     @staticmethod
-    def EmbeddingText(
-        texts: list[str], model: str = "text-embedding-3-small"
-    ) -> list[list[float]]:
-        response = _openAIClient.embeddings.create(input=texts, model=model)
-        return [d.embedding for d in response.data]
+    def AveragePool(last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
+        last_hidden = last_hidden_states.masked_fill(
+            ~attention_mask[..., None].bool(), 0.0
+        )
+        return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
     @staticmethod
     def StoreVectorInfile(embeddings: list[list[float]], filePath: str):
@@ -233,7 +249,7 @@ class AIService:
             neighbors = list(G.successors(idx))
             print(neighbors)
             if neighbors:
-                neighborText = [G.nodes[neighbors[n]]["text"] for n in neighbors]
+                neighborText = [G.nodes[n]["text"] for n in neighbors]
                 result.append(nodeText + " " + " ".join(neighborText))
             else:
                 result.append(nodeText)
