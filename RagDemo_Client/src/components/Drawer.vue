@@ -1,3 +1,16 @@
+<script setup>
+import { defineProps, defineEmits } from 'vue'
+
+defineProps({
+  isOpen: {
+    type: Boolean,
+    required: true,
+  },
+})
+
+defineEmits(['close'])
+</script>
+
 <template>
   <div
     class="fixed flex flex-col h-full w-64 bg-white dark:bg-gray-800 shadow-lg transition-transform duration-300 transform"
@@ -46,16 +59,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { defineProps, defineEmits } from 'vue'
-
-defineProps({
-  isOpen: {
-    type: Boolean,
-    required: true,
-  },
-})
-
-defineEmits(['close'])
-</script>
