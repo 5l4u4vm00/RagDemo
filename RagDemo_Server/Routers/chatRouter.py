@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from DataModels.Model.Request import Request
+from DataModels.Models.Request import Request
 from Services.AIService import AIService
 
 router = APIRouter(prefix="/ChatBot")

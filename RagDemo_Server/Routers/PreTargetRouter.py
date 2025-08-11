@@ -23,5 +23,7 @@ async def SplitTextFromDoc(file: UploadFile = File(), maxToken: int = 60) -> lis
     result = await _service.SplitText(file, maxToken)
     return result
 
+
 @router.post("/EmbeddingChunksStore")
-def EmbeddingChunkTextsStore(chunks:list[str]):
+def EmbeddingChunkTextsStore(chunks: list[str]):
+    return
