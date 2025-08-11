@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: ./RagDeom_Server
+      dockerfile: Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./RagDeom_Server:/app
+    container_name: ragdemo-backend
+
+  frontend:
+    build:
+      context: ./RagDemo_Client
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./RagDemo_Client:/app
+      - /app/node_modules
+    container_name: ragdemo-frontend

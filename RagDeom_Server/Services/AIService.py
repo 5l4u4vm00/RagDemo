@@ -44,7 +44,7 @@ class AIService:
         """
         Ask question to local model
         """
-        client = ollama.AsyncClient()
+        client = ollama.AsyncClient(host="http://host.docker.internal:11434")
 
         prompts = self.SimilarQueryAndReturnPrompts(user_input, top_k=2, mode="graph")
         messages = self.messages.copy()
