@@ -3,6 +3,10 @@ from transformers import AutoTokenizer, AutoModel
 from docx import Document
 import pdfplumber
 import io
+from torch import Tensor
+import torch.nn.functional as F
+
+_dataCollectionPath = "../VectorStore/"
 
 
 class PreTargetService:
@@ -39,6 +43,24 @@ class PreTargetService:
             chunks.append(chunkTexts)
 
         return chunks
+
+    def EmbeddingTexts(self, texts: list[str], dataName: str) -> list[list[float]]:
+        inputs = self._tokenizer(
+            texts, padding=True, max_length=512, truncation=True, return_tensors="pt"
+        )
+        outputs = self._model(**inputs)
+        embeddings = self.AveragePool(
+            outputs.last_hidden_state, inputs["attention_mask"]
+        )
+        embeddings = F.normalize(embeddings, p=2, dim=1)
+        return embeddings.tolist()
+
+    @staticmethod
+    def AveragePool(last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
+        last_hidden = last_hidden_states.masked_fill(
+            ~attention_mask[..., None].bool(), 0.0
+        )
+        return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
     @staticmethod
     def ReadDocxContent(IOByteFile: io.BytesIO) -> str | None:
