@@ -1,6 +1,5 @@
 import os
 import ollama
-import tiktoken
 import faiss
 import json
 import numpy as np
@@ -40,13 +39,15 @@ class AIService:
             {"role": "system", "content": "你是一個智慧助理，請使用繁體中文回答。"}
         ]
 
-    async def AskLlama(self, user_input: str, model: str = "gemma3n:e4b") -> str | None:
+    async def AskLlama(
+        self, user_input: str, model: str = "llama3", mode: str = "vector"
+    ) -> str | None:
         """
         Ask question to local model
         """
         client = ollama.AsyncClient()
 
-        prompts = self.SimilarQueryAndReturnPrompts(user_input, top_k=2, mode="graph")
+        prompts = self.SimilarQueryAndReturnPrompts(user_input, top_k=2, mode=mode)
         messages = self.messages.copy()
         messages.append({"role": "user", "content": prompts})
         response: ChatResponse = await client.chat(model=model, messages=messages)
@@ -68,11 +69,13 @@ class AIService:
     def SimilarQueryAndReturnPrompts(
         cls, question: str, top_k: int = 5, mode: str = "graph"
     ):
-        match mode:
+        match mode.lower():
             case "graph":
                 contextChunks = cls.SearchGraphRag(question, top_k)
-            case _:
+            case "vector":
                 contextChunks = cls.SearchSimilar(question, top_k)
+            case _:
+                raise ValueError("Please input the right mode name.")
         prompts = cls.BuildPrompt(question, contextChunks)
         return prompts
 
@@ -152,13 +155,12 @@ class AIService:
     def SplitTextByTokens(
         text: str, maxTokens: int, model: str = "text-embedding-3-small"
     ) -> list[str]:
-        encoding = tiktoken.encoding_for_model(model)
-        tokens = encoding.encode(text)
+        tokens = _tokenizer.encode(text)
 
         chunks = []
         for i in range(0, len(tokens), maxTokens):
             chunkTokens = tokens[i : i + maxTokens]
-            chunkText = encoding.decode(chunkTokens)
+            chunkText = _tokenizer.decode(chunkTokens)
             chunks.append(chunkText)
 
         return chunks
@@ -247,7 +249,6 @@ class AIService:
             idx = int(idx)
             nodeText = G.nodes[idx]["text"]
             neighbors = list(G.successors(idx))
-            print(neighbors)
             if neighbors:
                 neighborText = [G.nodes[n]["text"] for n in neighbors]
                 result.append(nodeText + " " + " ".join(neighborText))

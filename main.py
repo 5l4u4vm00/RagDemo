@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from Routers.chatRouter import router as chatRouter
+from Routers.PreTargetRouter import router as PreTargetRouter
 
-app = FastAPI(title="我的智能助理", version="v1")
+app = FastAPI(title="RagTool", version="v1")
 app.include_router(chatRouter, tags=["chatBot"])
+app.include_router(PreTargetRouter, tags=["preTarget"])
 
 
 if __name__ == "__main__":

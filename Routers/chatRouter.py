@@ -1,9 +1,9 @@
 from fastapi import APIRouter
-from DataModels.Request import Request
+from DataModels.Model.Request import Request
 from Services.AIService import AIService
 
 router = APIRouter(prefix="/ChatBot")
-_aiHelper = AIService()
+_services = AIService()
 
 
 @router.post("/AskLLaMA")
@@ -17,7 +17,9 @@ async def AskLlama(request: Request) -> str | None:
     Returns:
     - str | None: The model's response, or None if the request fails.
     """
-    result = await _aiHelper.AskLlama(user_input=request.question)
+    result = await _services.AskLlama(
+        user_input=request.question, model=request.model, mode=request.mode
+    )
 
     return result
 
@@ -33,12 +35,12 @@ def AskOpenAI(request: Request):
     Returns:
     - str | None: The model's response, or None if the request fails.
     """
-    result = _aiHelper.AskOpenAI(user_input=request.question)
+    result = _services.AskOpenAI(user_input=request.question)
 
     return result
 
 
 @router.get("/embeddingFromFolder")
 def EmbeddingFromFile():
-    chunks = _aiHelper.EmbeddingFileInFolder()
+    chunks = _services.EmbeddingFileInFolder()
     return chunks
