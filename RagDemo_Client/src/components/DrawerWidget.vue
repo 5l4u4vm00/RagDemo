@@ -1,6 +1,4 @@
-<script setup>
-import { defineProps, defineEmits } from 'vue'
-
+<script setup lang="ts">
 defineProps({
   isOpen: {
     type: Boolean,
@@ -13,8 +11,8 @@ defineEmits(['close'])
 
 <template>
   <div
-    class="fixed flex flex-col h-full w-64 bg-white dark:bg-gray-800 shadow-lg transition-transform duration-300 transform"
-    :class="{ '-translate-x-64': !isOpen }"
+    class="absolute flex flex-col h-full w-0 bg-white dark:bg-gray-800 shadow-lg transition-transform duration-300 transform"
+    :class="{ '-translate-x-64': !isOpen, 'w-64': isOpen }"
   >
     <div
       class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
@@ -41,7 +39,7 @@ defineEmits(['close'])
       </button>
     </div>
 
-    <div class="flex-1 p-4 overflow-y-auto space-y-2">
+    <div class="relative flex-1 p-4 overflow-y-auto space-y-2">
       <div
         class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
       >
@@ -56,6 +54,13 @@ defineEmits(['close'])
           使用者詢問了 Vue 3 的 Composition API...
         </p>
       </div>
+    </div>
+    <div class="flex justify-end p-4">
+      <button
+        class="p-2 rounded-md dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+      >
+        上傳檔案
+      </button>
     </div>
   </div>
 </template>

@@ -1,15 +1,31 @@
 services:
   backend:
     build:
-      context: ./RagDeom_Server
+      context: ./RagDemo_Server
       dockerfile: Dockerfile
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
       - "8888:8888"
     volumes:
-      - ./RagDeom_Server:/app
-    container_name: ragdemo-backend
+      - ./RagDemo_Server:/app
+    container_name: ragddevelop
+    develop:
+      # Create a `watch` configuration to update the appl
+      # https://docs.docker.com/compose/file-watch/#compose-watch-versus-bind-mounts
+      watch:
+        # Sync the working directory with the `/app` directory in the container
+        - action: sync
+          path: .
+          target: /app
+          # Exclude the project virtual environment — it could be for a
+          # different platform in the container
+          ignore:
+            - .venv/
+
+        # Rebuild the image on changes to the `pyproject.toml`
+        - action: rebuild
+          path: ./pyproject.toml
 
   frontend:
     build:
