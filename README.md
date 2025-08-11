@@ -1,133 +1,83 @@
-# My Smart Assistant
+# RagDemo - Full-Stack RAG Chat Application
 
-This project is a RAG (Retrieval-Augmented Generation) application that functions as a smart assistant. It can answer questions based on a collection of documents you provide. The application is built using the FastAPI framework and leverages both local and remote Large Language Models (LLMs) to generate responses.
+This project is a full-stack Retrieval-Augmented Generation (RAG) application that functions as a smart assistant. It features a Vue.js frontend and a FastAPI backend, allowing users to ask questions and receive answers based on a collection of provided documents.
+
+The application leverages advanced techniques like vector and graph-based retrieval to provide accurate, context-aware responses. It supports multiple document formats and can be configured to use either local (Ollama) or remote (OpenAI) Large Language Models.
+
+## Architecture
+
+The application consists of two main services orchestrated by Docker Compose:
+
+-   **`RagDemo_Client` (Frontend):** A web-based chat interface built with Vue.js. It communicates with the backend API to send questions and display responses.
+-   **`RagDeom_Server` (Backend):** An API built with Python and FastAPI. It handles document processing, embedding generation, and interaction with the LLM to generate answers.
 
 ## Features
 
-- **Document-based Q&A:** Answers questions based on the content of documents stored in the `documents` directory.
-- **Multi-format Document Support:** Can process both PDF (.pdf) and Microsoft Word (.docx) files.
-- **Vector-based Retrieval:** Utilizes the `text-embedding-3-small` model from OpenAI to create vector embeddings of the document text, enabling efficient similarity search.
-- **Graph-based Retrieval:** Creates a graph of related text chunks to provide more contextually relevant information.
-- **FAISS Vector Store:** Stores the vector embeddings in a [FAISS](https://github.com/facebookresearch/faiss) index for fast retrieval.
-- **Dual LLM Support:** Offers the flexibility to use either a local LLaMA model (via Ollama) or the OpenAI API for generating answers.
-- **Easy-to-use API:** Provides a simple API for asking questions and for triggering the document embedding process.
-
-## Project Structure
-
-```
-├── DataModels
-│   └── Request.py
-├── documents
-│   └── (Your documents go here)
-├── Routers
-│   └── chatRouter.py
-├── Services
-│   └── AIService.py
-├── VectorStore
-│   ├── graphDB.graphml
-│   ├── textList.json
-│   └── vectorDB.faiss
-├── main.py
-├── requirement.txt
-└── README.md
-```
+-   **Web Interface:** An intuitive chat interface for interacting with the assistant.
+-   **Document-based Q&A:** Answers questions based on the content of documents stored in the `RagDeom_Server/documents` directory.
+-   **Multi-format Document Support:** Can process both PDF (`.pdf`) and Microsoft Word (`.docx`) files.
+-   **Vector-based Retrieval:** Utilizes OpenAI's `text-embedding-3-small` model for efficient similarity search.
+-   **Graph-based Retrieval:** Creates a knowledge graph of related text chunks to provide more contextually relevant information.
+-   **FAISS Vector Store:** Stores vector embeddings in a FAISS index for fast retrieval.
+-   **Dual LLM Support:** Flexible configuration to use either a local LLaMA model (via Ollama) or the OpenAI API.
+-   **Containerized:** Easily run the entire application using Docker and Docker Compose.
 
 ## Getting Started
 
+The recommended way to run the application is with Docker.
+
 ### Prerequisites
 
-- Python 3.12.5+
-- An Azure OpenAI API key and endpoint
-- (Optional) [Ollama](https://ollama.ai/) installed and running for local LLM support
+-   [Docker](https://www.docker.com/get-started)
+-   [Docker Compose](https://docs.docker.com/compose/install/)
+-   An Azure OpenAI API key and endpoint (if using the OpenAI model).
 
-### Installation
+### Configuration
 
-1. **Clone the repository:**
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd RagDemo
+    ```
 
-   ```bash
-   git clone <repository-url>
-   cd <repository-directory>
-   ```
+2.  **Add Documents:**
+    Place the PDF and DOCX files you want to use as the knowledge base into the `RagDeom_Server/documents/` directory.
 
-2. **Create and activate a virtual environment:**
+3.  **Set Up Environment Variables:**
+    Create a file named `.env` inside the `RagDeom_Server` directory and add your Azure OpenAI credentials. This step is required even if you plan to use a local model.
 
-   ```bash
-   uv venv
-   source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
-   ```
+    ```
+    # RagDeom_Server/.env
+    AZURE_OPENAI_KEY="your-azure-openai-key"
+    AZURE_OPENAI_ENDPOINT="your-azure-openai-endpoint"
+    ```
 
-3. **Install the dependencies:**
+### Running the Application
 
-   ```bash
-   uv add -r requirement.txt
-   ```
+1.  **Launch with Docker Compose:**
+    Open a terminal in the project's root directory and run:
+    ```bash
+    docker-compose up --build
+    ```
+    On the first launch, the backend service will automatically read the documents, create vector embeddings, and build the knowledge graph. This may take some time depending on the number and size of your documents.
 
-4. **Set up your environment variables:**
+2.  **Access the Application:**
+    -   **Frontend Chat:** Open your web browser and navigate to `http://localhost:5173`.
+    -   **Backend API Docs:** The backend API documentation is available at `http://localhost:8888/docs`.
 
-   Create a `.env` file in the root of the project and add your Azure OpenAI credentials:
+## Manual Setup (for Development)
 
-   ```
-   AZURE_OPENAI_KEY="your-azure-openai-key"
-   AZURE_OPENAI_ENDPOINT="your-azure-openai-endpoint"
-   ```
-
-### Usage
-
-1. **Add your documents:**
-
-   Place the PDF and DOCX files you want to use as the knowledge base into the `documents` directory.
-
-2. **Generate the vector embeddings:**
-
-   Start the application, which will automatically trigger the embedding process for the documents in the `documents` folder.
-
-3. **Run the application:**
-
-   ```bash
-   uv run main.py
-   ```
-
-4. **Access the API:**
-
-   The API documentation will be available at `http://127.0.0.1:8888/docs`.
-
-## API Endpoints
-
-- **`POST /ChatBot/AskLLaMA`**: Sends a question to the local LLaMA model and returns the response.
-
-  **Request Body:**
-
-  ```json
-  {
-    "question": "Your question here"
-  }
-  ```
-
-- **`POST /ChatBot/AskOpenAI`**: Sends a question to the OpenAI model and returns the response.
-
-  **Request Body:**
-
-  ```json
-  {
-    "question": "Your question here"
-  }
-  ```
-
-- **`GET /ChatBot/embeddingFromFolder`**: Triggers the process of reading the documents in the `documents` folder, creating vector embeddings, and storing them in the vector database.
+For development, you can run the frontend and backend services separately. Refer to the README files in the `RagDemo_Client` and `RagDeom_Server` directories for detailed instructions.
 
 ## How It Works
 
-1. **Document Loading and Chunking:** The application reads the text from the PDF and DOCX files in the `documents` directory. The text is then split into smaller chunks using `tiktoken`.
-
-2. **Vector Embedding:** Each text chunk is converted into a vector embedding using the OpenAI `text-embedding-3-small` model.
-
-3. **Vector Storage:** The vector embeddings are stored in a FAISS index (`vectorDB.faiss`), and the corresponding text chunks are saved in a JSON file (`textList.json`).
-
-4. **Graph Creation:** A graph is created where each node is a text chunk, and an edge is created between two nodes if their cosine similarity is above a certain threshold. This graph is stored in a GraphML file (`graphDB.graphml`).
-
-5. **Question Answering:**
-   - When a question is received, the application creates a vector embedding of the question.
-   - It then uses the FAISS index to find the most similar text chunks from the documents.
-   - For each of the top-k similar chunks, it also retrieves its neighbors from the graph to provide more context.
-   - These relevant text chunks are then combined with the original question to form a prompt.
-   - Finally, the prompt is sent to either the local LLaMA model or the OpenAI API to generate a response.
+1.  **Document Processing:** The backend reads text from PDF and DOCX files in the `documents` directory and splits it into smaller chunks.
+2.  **Vector Embedding:** Each text chunk is converted into a vector embedding using the OpenAI `text-embedding-3-small` model.
+3.  **Vector Storage:** The embeddings are stored in a FAISS index (`vectorDB.faiss`), and the corresponding text chunks are saved in `textList.json`.
+4.  **Graph Creation:** A knowledge graph (`graphDB.graphml`) is built where nodes are text chunks, and edges connect chunks with high cosine similarity, capturing relationships between them.
+5.  **Question Answering:**
+    -   When a user asks a question through the frontend, it's sent to the backend API.
+    -   The backend creates a vector embedding of the question and uses the FAISS index to find the most similar text chunks.
+    -   It then traverses the knowledge graph to retrieve neighboring chunks for added context.
+    -   This context, along with the original question, is formatted into a prompt.
+    -   Finally, the prompt is sent to the configured LLM (Ollama or OpenAI) to generate a response, which is streamed back to the user.

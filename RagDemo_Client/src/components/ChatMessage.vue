@@ -1,13 +1,3 @@
-<template>
-  <div :class="messageClasses">
-    <div :class="bubbleClasses">
-      <p class="text-sm">
-        {{ message }}
-      </p>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { computed } from 'vue'
 
@@ -41,3 +31,13 @@ const bubbleClasses = computed(() => [
   },
 ])
 </script>
+
+<template>
+  <div :class="messageClasses">
+    <div :class="bubbleClasses">
+      <p class="text-sm">
+        {{ message }}
+      </p>
+    </div>
+  </div>
+</template>

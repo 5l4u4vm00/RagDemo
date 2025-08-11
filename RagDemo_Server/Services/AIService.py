@@ -36,7 +36,10 @@ if _openAIKey and _openAIEndpoint:
 class AIService:
     def __init__(self):
         self.messages: list[ChatCompletionMessageParam] = [
-            {"role": "system", "content": "你是一個智慧助理，請使用繁體中文回答。"}
+            {
+                "role": "system",
+                "content": "你是一個市民的好幫手，請用人性化的口吻的繁體中文回答",
+            }
         ]
 
     async def AskLlama(
@@ -45,7 +48,7 @@ class AIService:
         """
         Ask question to local model
         """
-        client = ollama.AsyncClient()
+        client = ollama.AsyncClient(host="http://host.docker.internal:11434")
 
         prompts = self.SimilarQueryAndReturnPrompts(user_input, top_k=2, mode=mode)
         messages = self.messages.copy()
@@ -231,8 +234,8 @@ class AIService:
         {context_text}
         
         問題：{question}
-        請用中文簡潔、準確回答。
-        若資料沒有相關內容則不提供相關答案
+        回答時不需提到根據
+        請不要回答不在資料裡的內容 or 若我問的問題不在你的資料內，你可以回答『目前資料庫內無相關內容。如果您有其他關於公園場地使用、管理或陳情相關問題，歡迎提出，我會盡力協助您！』
         """
         return prompt
 
