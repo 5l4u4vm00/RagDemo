@@ -1,3 +1,4 @@
+import json
 from fastapi import UploadFile, File
 from transformers import AutoTokenizer, AutoModel
 from docx import Document
@@ -5,8 +6,13 @@ import pdfplumber
 import io
 from torch import Tensor
 import torch.nn.functional as F
+from sklearn.metrics.pairwise import cosine_similarity
+import networkx as nx
+import faiss
+import numpy as np
+import os
 
-_dataCollectionPath = "../VectorStore/"
+_dataCollectionPath = "./VectorStore/"
 
 
 class PreTargetService:
@@ -44,7 +50,13 @@ class PreTargetService:
 
         return chunks
 
-    def EmbeddingTexts(self, texts: list[str], dataName: str) -> list[list[float]]:
+    def EmbeddingTexts(self, texts: list[str], dataName: str):
+        folderPath = _dataCollectionPath + f"{dataName}/"
+        if not os.path.isdir(folderPath):
+            os.mkdir(folderPath)
+
+        self.StoreTexts(texts, folderPath + f"{dataName}.json")
+
         inputs = self._tokenizer(
             texts, padding=True, max_length=512, truncation=True, return_tensors="pt"
         )
@@ -52,8 +64,45 @@ class PreTargetService:
         embeddings = self.AveragePool(
             outputs.last_hidden_state, inputs["attention_mask"]
         )
-        embeddings = F.normalize(embeddings, p=2, dim=1)
-        return embeddings.tolist()
+        embeddings = F.normalize(embeddings, p=2, dim=1).tolist()
+
+        self.StoreVectorInfile(embeddings, folderPath + f"{dataName}.faiss")
+        self.CreatGraphAndStore(texts, embeddings, folderPath + f"{dataName}.graphml")
+
+    @staticmethod
+    def StoreTexts(texts: list[str], filePath: str):
+        jsonFile = open(filePath, "w")
+        json.dump(texts, jsonFile)
+        jsonFile.close()
+
+    @staticmethod
+    def CreatGraphAndStore(
+        chunkTexts: list[str], embeddings: list[list[float]], filePath: str
+    ):
+        threshold = 0.65
+        similarities = cosine_similarity(embeddings)
+        G = nx.DiGraph()
+        # Add node
+        for i, chunk in enumerate(chunkTexts):
+            G.add_node(i, text=chunk)
+
+        # Add edage
+        for i in range(len(chunkTexts)):
+            for j in range(i + 1, len(chunkTexts)):
+                sim = similarities[i][j]
+                if sim >= threshold:
+                    G.add_edge(i, j, weight=sim)
+        nx.write_graphml(G, filePath)
+
+    @staticmethod
+    def StoreVectorInfile(embeddings: list[list[float]], filePath: str):
+        dim = len(embeddings[0])
+        index = faiss.IndexFlatL2(dim)
+
+        npEmbeddings = np.array(embeddings).astype("float32")
+        index.add(npEmbeddings)
+
+        faiss.write_index(index, filePath)
 
     @staticmethod
     def AveragePool(last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
