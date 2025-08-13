@@ -4,5 +4,8 @@ from DataModels.Enums.EMode import EMode
 
 class Request(BaseModel):
     question: str
-    model: str = "llama3"
-    mode: EMode = "vector"
+    systemMessage: str
+    model: str = "gemma3n:e4b"
+    mode: EMode = EMode.vector
+    dataList: list[str]
+    finalPrompt: str

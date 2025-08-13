@@ -3,27 +3,24 @@ import ollama
 import faiss
 import json
 import numpy as np
-import pdfplumber
 import networkx as nx
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 from ollama import ChatResponse
 from openai.types.chat.completion_create_params import ChatCompletionMessageParam
-from docx import Document
-from sklearn.metrics.pairwise import cosine_similarity
+from scipy.stats import f
 from transformers import AutoTokenizer, AutoModel
 import torch.nn.functional as F
 from torch import Tensor
+from DataModels.Enums.EMode import EMode
 
 load_dotenv()
 _openAIKey = os.environ.get("AZURE_OPENAI_KEY")
 _openAIEndpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
+_dataCollectionPath = "./VectorStore/"
 _faissPath = "./VectorStore/vectorDB.faiss"
 _jsonPath = "./VectorStore/textList.json"
 _nxPath = "./VectorStore/graphDB.graphml"
-_documentPath = "./documents/"
-_tokenizer = AutoTokenizer.from_pretrained("intfloat/multilingual-e5-large")
-_embeddingModel = AutoModel.from_pretrained("intfloat/multilingual-e5-large")
 
 if _openAIKey and _openAIEndpoint:
     _openAIClient = AzureOpenAI(
@@ -34,185 +31,97 @@ if _openAIKey and _openAIEndpoint:
 
 
 class AIService:
-    def __init__(self):
-        self.messages: list[ChatCompletionMessageParam] = [
-            {
-                "role": "system",
-                "content": "你是一個市民的好幫手，請用人性化的口吻的繁體中文回答",
-            }
-        ]
+    def __init__(self, model: str = "intfloat/multilingual-e5-large"):
+        self._tokenizer = AutoTokenizer.from_pretrained(model)
+        self._model = AutoModel.from_pretrained(model)
 
     async def AskLlama(
-        self, user_input: str, model: str = "llama3", mode: str = "vector"
+        self,
+        user_input: str,
+        systemMassage: str = "",
+        model: str = "llama3",
+        mode: EMode = EMode.vector,
+        dataList: list[str] = [],
+        finalPrompt: str = "",
     ) -> str | None:
         """
         Ask question to local model
         """
         client = ollama.AsyncClient(host="http://host.docker.internal:11434")
 
-        prompts = self.SimilarQueryAndReturnPrompts(user_input, top_k=2, mode=mode)
-        messages = self.messages.copy()
+        prompts = self.SimilarQueryAndReturnPrompts(
+            user_input, top_k=5, mode=mode, dataList=dataList, finalPrompt=finalPrompt
+        )
+        messages: list[ChatCompletionMessageParam] = [
+            {"role": "system", "content": systemMassage}
+        ]
         messages.append({"role": "user", "content": prompts})
         response: ChatResponse = await client.chat(model=model, messages=messages)
         return response.message.content
 
-    def AskOpenAI(self, user_input: str, model: str = "gpt-4.1") -> str | None:
+    def AskOpenAI(
+        self,
+        user_input: str,
+        systemMassage: str = "",
+        model: str = "gpt-4.1",
+        mode: EMode = EMode.vector,
+        dataList: list[str] = [],
+        finalPrompt: str = "",
+    ) -> str | None:
         """
         Ask question to openai model
         """
         if not _openAIClient:
             return "Please set the azure openai key and endpoint in .env"
-        prompts = self.SimilarQueryAndReturnPrompts(user_input, top_k=2)
-        messages = self.messages.copy()
+        prompts = self.SimilarQueryAndReturnPrompts(
+            user_input, top_k=2, mode=mode, dataList=dataList, finalPrompt=finalPrompt
+        )
+        messages: list[ChatCompletionMessageParam] = [
+            {"role": "system", "content": systemMassage}
+        ]
         messages.append({"role": "user", "content": prompts})
         response = _openAIClient.chat.completions.create(model=model, messages=messages)
         return response.choices[0].message.content
 
-    @classmethod
     def SimilarQueryAndReturnPrompts(
-        cls, question: str, top_k: int = 5, mode: str = "graph"
+        self,
+        question: str,
+        top_k: int = 5,
+        mode: EMode = EMode.vector,
+        dataList: list[str] = [],
+        finalPrompt: str = "",
     ):
-        match mode.lower():
-            case "graph":
-                contextChunks = cls.SearchGraphRag(question, top_k)
-            case "vector":
-                contextChunks = cls.SearchSimilar(question, top_k)
-            case _:
-                raise ValueError("Please input the right mode name.")
-        prompts = cls.BuildPrompt(question, contextChunks)
+        match mode:
+            case EMode.vector:
+                contextChunks = self.SearchSimilar(question, top_k, dataList=dataList)
+            case EMode.graph:
+                contextChunks = self.SearchGraphRag(question, top_k, dataList=dataList)
+        prompts = self.BuildPrompt(question, contextChunks, finalPrompt)
         return prompts
-
-    @classmethod
-    def EmbeddingFileInFolder(cls):
-        """
-        Read and embedding the file in documents, and store the rsult in the data base file.
-        """
-        chunkTexts = []
-        for fileName in os.listdir(_documentPath):
-            content = ""
-            match fileName.split(".")[-1].lower():
-                case "pdf":
-                    content = cls.ReadPdfContent(_documentPath + fileName)
-                case "docx":
-                    content = cls.ReadDocxContent(_documentPath + fileName)
-                case _:
-                    continue
-            if not content:
-                continue
-            chunkText = cls.SplitTextByTokens(text=content, maxTokens=100)
-            chunkTexts.extend(chunkText)
-
-        embeddings = cls.EmbeddingText(chunkTexts)
-        cls.CreatGraphAndStore(chunkTexts, embeddings)
-        if os.path.isfile(_faissPath):
-            os.remove(_faissPath)
-        cls.StoreVectorInfile(embeddings, _faissPath)
-        jsonFile = open(_jsonPath, "w")
-        json.dump(chunkTexts, jsonFile)
-        jsonFile.close()
-        return embeddings
-
-    @staticmethod
-    def CreatGraphAndStore(chunkTexts: list[str], embeddings: list[list[float]]):
-        threshold = 0.65
-        similarities = cosine_similarity(embeddings)
-        G = nx.DiGraph()
-        # Add node
-        for i, chunk in enumerate(chunkTexts):
-            G.add_node(i, text=chunk)
-
-        # Add edage
-        for i in range(len(chunkTexts)):
-            for j in range(i + 1, len(chunkTexts)):
-                sim = similarities[i][j]
-                if sim >= threshold:
-                    G.add_edge(i, j, weight=sim)
-        nx.write_graphml(G, _nxPath)
-
-    @staticmethod
-    def ReadDocxContent(filepath: str) -> str | None:
-        try:
-            document = Document(filepath)
-            fullText = []
-            for paragraph in document.paragraphs:
-                fullText.append(paragraph.text)
-            return "".join(fullText)
-        except Exception as ex:
-            print(f"Error reading DOCX file: {ex}")
-            return None
-
-    @staticmethod
-    def ReadPdfContent(filepath: str) -> str | None:
-        try:
-            fullText = []
-            pdfDoc = pdfplumber.open(filepath)
-            for page in pdfDoc.pages:
-                fullText.append(page.extract_text())
-            pdfDoc.close()
-            return "".join(fullText)
-        except Exception as ex:
-            print(f"Error reading PDF file: {ex}")
-            return None
-
-    @staticmethod
-    def SplitTextByTokens(
-        text: str, maxTokens: int, model: str = "text-embedding-3-small"
-    ) -> list[str]:
-        tokens = _tokenizer.encode(text)
-
-        chunks = []
-        for i in range(0, len(tokens), maxTokens):
-            chunkTokens = tokens[i : i + maxTokens]
-            chunkText = _tokenizer.decode(chunkTokens)
-            chunks.append(chunkText)
-
-        return chunks
-
-    @classmethod
-    def EmbeddingText(cls, texts: list[str]) -> list[list[float]]:
-        inputs = _tokenizer(
-            texts, padding=True, max_length=512, truncation=True, return_tensors="pt"
-        )
-        outputs = _embeddingModel(**inputs)
-        embeddings = cls.AveragePool(
-            outputs.last_hidden_state, inputs["attention_mask"]
-        )
-        embeddings = F.normalize(embeddings, p=2, dim=1)
-        return embeddings.tolist()
-
-    @staticmethod
-    def AveragePool(last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
-        last_hidden = last_hidden_states.masked_fill(
-            ~attention_mask[..., None].bool(), 0.0
-        )
-        return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
-
-    @staticmethod
-    def StoreVectorInfile(embeddings: list[list[float]], filePath: str):
-        dim = len(embeddings[0])
-        index = faiss.IndexFlatL2(dim)
-
-        npEmbeddings = np.array(embeddings).astype("float32")
-        index.add(npEmbeddings)
-
-        faiss.write_index(index, filePath)
 
     @staticmethod
     def LoadVectorFile(filePath: str) -> faiss.Index:
         index = faiss.read_index(filePath)
         return index
 
-    @classmethod
-    def SearchSimilar(
-        cls, question: str, top_k: int = 5, model="text-embedding-3-small"
-    ):
-        jsonFile = open(_jsonPath, "r")
-        texts = json.load(jsonFile)
-        index = cls.LoadVectorFile(_faissPath)
+    def SearchSimilar(self, question: str, top_k: int = 5, dataList: list[str] = []):
+        texts: list[str] = []
+        embeddings: list[list[float]] = []
+        for dataName in dataList:
+            folderPath = _dataCollectionPath + dataName
+            jsonFile = open(folderPath + f"/{dataName}.json", "r")
+            texts.extend(json.load(jsonFile))
+            jsonFile.close()
+            index = self.LoadVectorFile(folderPath + f"/{dataName}.faiss")
+            ntotal, d = index.ntotal, index.d
+            recons = np.zeros((ntotal, d), dtype="float32")
+            embeddings.extend(index.reconstruct_n(0, ntotal, recons))
 
-        questionVector = np.array(
-            cls.EmbeddingText(texts=[question], model=model)
-        ).astype("float32")
+        index = self.CreateFaissIndex(embeddings)
+
+        questionVector = np.array(self.EmbeddingTexts(texts=[question])).astype(
+            "float32"
+        )
 
         distances, indices = index.search(questionVector, k=top_k)
 
@@ -221,30 +130,39 @@ class AIService:
             result_text = texts[idx]
             results.append(result_text)
 
-        if jsonFile:
-            jsonFile.close()
-
         return results
 
-    @staticmethod
-    def BuildPrompt(question: str, context_chunks: list[str]) -> str:
-        context_text = "\n\n".join(context_chunks)
-        prompt = f"""根據以下資料回答問題：
-        
-        {context_text}
-        
-        問題：{question}
-        回答時不需提到根據
-        請不要回答不在資料裡的內容 or 若我問的問題不在你的資料內，你可以回答『目前資料庫內無相關內容。如果您有其他關於公園場地使用、管理或陳情相關問題，歡迎提出，我會盡力協助您！』
-        """
-        return prompt
+    def SearchGraphRag(self, query: str, top_k=2, dataList: list[str] = []):
+        embeddings: list[list[float]] = []
+        G = nx.DiGraph()
 
-    @classmethod
-    def SearchGraphRag(cls, query: str, top_k=2):
-        index = cls.LoadVectorFile(_faissPath)
-        G = nx.read_graphml(_nxPath, node_type=int)
+        for dataName in dataList:
+            folderPath = _dataCollectionPath + dataName
+            index = self.LoadVectorFile(folderPath + f"/{dataName}.faiss")
 
-        queryVector = np.array(cls.EmbeddingText([query])).astype("float32")
+            # --- Reconstruct embeddings ---
+            ntotal, d = index.ntotal, index.d
+            recons = np.zeros((ntotal, d), dtype="float32")
+            index.reconstruct_n(0, ntotal, recons)
+            embeddings.extend(recons.tolist())
+
+            # --- Merge graph ---
+            G1 = nx.read_graphml(folderPath + f"/{dataName}.graphml", node_type=int)
+
+            if len(G.nodes) > 0:
+                max_node = max(G.nodes)
+            else:
+                max_node = -1
+
+            mapping = {n: n + max_node + 1 for n in G1.nodes()}  # keep as int
+            G1 = nx.relabel_nodes(G1, mapping)
+            G = nx.compose(G, G1)
+
+        # --- Create combined FAISS index ---
+        index = self.CreateFaissIndex(embeddings)
+
+        # --- Query ---
+        queryVector = np.array(self.EmbeddingTexts(texts=[query])).astype("float32")
         distances, indices = index.search(queryVector, k=top_k)
 
         result = []
@@ -257,4 +175,43 @@ class AIService:
                 result.append(nodeText + " " + " ".join(neighborText))
             else:
                 result.append(nodeText)
+
         return result
+
+    @staticmethod
+    def CreateFaissIndex(embeddings: list[list[float]]):
+        dim = len(embeddings[0])
+        index = faiss.IndexFlatL2(dim)
+
+        npEmbeddings = np.array(embeddings).astype("float32")
+        index.add(npEmbeddings)
+        return index
+
+    @staticmethod
+    def BuildPrompt(question: str, context_chunks: list[str], finalPrompt: str) -> str:
+        context_text = "\n\n".join(context_chunks)
+        prompt = f"""
+        nswer the questions based on the following information：
+        {context_text}
+        question：{question}
+        f{finalPrompt}
+        """
+        return prompt
+
+    def EmbeddingTexts(self, texts: list[str]) -> list[list[float]]:
+        inputs = self._tokenizer(
+            texts, padding=True, max_length=512, truncation=True, return_tensors="pt"
+        )
+        outputs = self._model(**inputs)
+        embeddings = self.AveragePool(
+            outputs.last_hidden_state, inputs["attention_mask"]
+        )
+        embeddings = F.normalize(embeddings, p=2, dim=1).tolist()
+        return embeddings
+
+    @staticmethod
+    def AveragePool(last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
+        last_hidden = last_hidden_states.masked_fill(
+            ~attention_mask[..., None].bool(), 0.0
+        )
+        return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]

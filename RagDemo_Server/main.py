@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from Routers.chatRouter import router as chatRouter
 from Routers.PreTargetRouter import router as PreTargetRouter
+from Routers.OptionRouter import router as OptionRouter
 
 app = FastAPI(title="RagTool", version="v1")
-app.include_router(chatRouter, tags=["chatBot"])
-app.include_router(PreTargetRouter, tags=["preTarget"])
+app.include_router(chatRouter, tags=["ChatBot"])
+app.include_router(PreTargetRouter, tags=["PreTarget"])
+app.include_router(OptionRouter, tags=["Options"])
 
 
 if __name__ == "__main__":
