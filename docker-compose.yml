@@ -9,8 +9,7 @@ services:
       - "8888:8888"
     volumes:
       - ./RagDemo_Server:/app
-    container_name: ragddevelop
-
+    container_name: ragdemo_backend
   frontend:
     build:
       context: ./RagDemo_Client
