@@ -1,83 +1,78 @@
 # RagDemo - 全端 RAG 聊天應用程式
 
-本專案是一個全端檢索增強生成 (Retrieval-Augmented Generation, RAG) 應用程式，可作為您的智能助理。它包含一個 Vue.js 前端和一個 FastAPI 後端，讓使用者能夠根據提供的文件集合進行提問並獲得回答。
+本專案是一個全端的「檢索增強生成」(Retrieval-Augmented Generation, RAG) 應用程式。它結合了 Vue.js 前端與 Python FastAPI 後端，打造一個能夠根據指定文件內容回答問題的智慧聊天助理。
 
-此應用程式利用向量和圖譜檢索等先進技術，以提供準確且具備上下文感知的回應。它支援多種文件格式，並可設定使用本地 (Ollama) 或遠端 (OpenAI) 的大型語言模型。
+此應用程式採用向量與圖譜檢索技術，以提供準確且符合上下文的回應。它支援多種文件格式，並可彈性設定使用本地端 (Ollama) 或遠端 (OpenAI) 的大型語言模型。
 
-## 系統架構
+## 技術棧
 
-此應用程式由兩個主要服務組成，並透過 Docker Compose 進行協調：
+- **前端:** Vue.js, Vite, Pinia, Tailwind CSS
+- **後端:** Python, FastAPI, Ollama, OpenAI
+- **向量儲存:** FAISS (用於高效的相似性搜尋)
+- **資料處理:** NetworkX (用於圖譜檢索)
+- **容器化:** Docker, Docker Compose
 
--   **`RagDemo_Client` (前端):** 一個使用 Vue.js 建置的網頁聊天介面。它與後端 API 通訊，以傳送問題並顯示回應。
--   **`RagDeom_Server` (後端):** 一個使用 Python 和 FastAPI 建置的 API。它負責處理文件、生成嵌入向量，並與 LLM 互動以生成答案。
+## 功能亮點
 
-## 功能
-
--   **網頁介面:** 提供直觀的聊天介面與助理互動。
--   **基於文件的問答:** 根據 `RagDeom_Server/documents` 目錄中儲存的文件內容回答問題。
--   **支援多種文件格式:** 可處理 PDF (`.pdf`) 和 Microsoft Word (`.docx`) 檔案。
--   **基於向量的檢索:** 利用 OpenAI 的 `text-embedding-3-small` 模型進行高效的相似性搜尋。
--   **基於圖譜的檢索:** 建立相關文字區塊的知識圖譜，以提供更具上下文關聯性的資訊。
--   **FAISS 向量儲存:** 將向量嵌入儲存在 FAISS 索引中，以實現快速檢索。
--   **支援雙 LLM:** 可靈活設定使用本地的 LLaMA 模型 (透過 Ollama) 或 OpenAI API。
--   **容器化:** 使用 Docker 和 Docker Compose 輕鬆運行整個應用程式。
+- **直觀的聊天介面:** 提供一個簡潔的網頁 UI，方便使用者互動。
+- **基於文件的問答:** 從 `RagDemo_Server/documents` 目錄中的文件擷取資訊並生成答案。
+- **支援多種文件格式:** 可處理 PDF (`.pdf`) 和 Microsoft Word (`.docx`) 檔案。
+- **進階檢索策略:**
+  - **向量搜尋:** 使用 `multilingual-e5-large` 模型進行快速的語意檢索。
+  - **圖譜搜尋:** 建立知識圖譜以尋找具備上下文關聯的資訊。
+- **彈性的 LLM 配置:** 同時支援透過 Ollama 運行的本地模型及 OpenAI API。
+- **容器化部署:** 整個應用程式透過 Docker 管理，簡化了設定與部署流程。
 
 ## 開始使用
 
-建議使用 Docker 來運行此應用程式。
+請使用 Docker 來運行此應用程式。
+請啟動ollama服務
 
-### 先決條件
+### 環境要求
 
--   [Docker](https://www.docker.com/get-started)
--   [Docker Compose](https://docs.docker.com/compose/install/)
--   一個 Azure OpenAI API 金鑰和端點 (若要使用 OpenAI 模型)。
+- [Docker](https://www.docker.com/get-started) & [Docker Compose](https://docs.docker.com/compose/install/)
+- 一組 Azure OpenAI API 金鑰與端點 (若要使用 OpenAI 模型)。
 
 ### 設定步驟
 
-1.  **複製儲存庫：**
-    ```bash
-    git clone <repository-url>
-    cd RagDemo
-    ```
+1. **複製儲存庫:**
 
-2.  **新增文件:**
-    將您想作為知識庫的 PDF 和 DOCX 檔案放入 `RagDeom_Server/documents/` 目錄中。
+   ```bash
+   git clone <repository-url>
+   cd RagDemo
+   ```
 
-3.  **設定環境變數:**
-    在 `RagDeom_Server` 目錄中建立一個名為 `.env` 的檔案，並新增您的 Azure OpenAI 憑證。即使您計劃使用本地模型，此步驟也是必要的。
+2. **設定環境變數:**
+   在 `RagDemo_Server` 目錄中建立一個名為 `.env` 的檔案，並填入您的 Azure OpenAI 憑證。即使您打算使用本地模型，此步驟也是必要的。
 
-    ```
-    # RagDeom_Server/.env
-    AZURE_OPENAI_KEY="your-azure-openai-key"
-    AZURE_OPENAI_ENDPOINT="your-azure-openai-endpoint"
-    ```
+   ```env
+   # RagDemo_Server/.env
+   AZURE_OPENAI_KEY="您的-azure-openai-金鑰"
+   AZURE_OPENAI_ENDPOINT="您的-azure-openai-端點"
+   ```
 
-### 執行應用程式
+### 運行應用程式
 
-1.  **使用 Docker Compose 啟動:**
-    在專案的根目錄中開啟一個終端機，並執行：
-    ```bash
-    docker-compose up --build
-    ```
-    首次啟動時，後端服務將自動讀取文件、建立向量嵌入並建構知識圖譜。這可能需要一些時間，具體取決於您文件的數量和大小。
+1. **使用 Docker Compose 啟動:**
+   在專案根目錄下，執行以下指令：
 
-2.  **存取應用程式:**
-    -   **前端聊天介面:** 開啟您的網頁瀏覽器並前往 `http://localhost:5173`。
-    -   **後端 API 文件:** 後端 API 文件可在 `http://localhost:8888/docs` 查閱。
+   ```bash
+   docker-compose up --build
+   ```
 
-## 手動設定 (開發用途)
+2. **存取應用程式:**
+   - **前端聊天介面:** `http://localhost:5173`
+   - **後端 API 文件:** `http://localhost:8888/docs`
 
-在開發過程中，您可以分別運行前端和後端服務。詳細說明請參閱 `RagDemo_Client` 和 `RagDeom_Server` 目錄中的 README 檔案。
+## 運作原理
 
-## 運作方式
-
-1.  **文件處理:** 後端會從 `documents` 目錄中的 PDF 和 DOCX 檔案讀取文字，並將其分割成較小的區塊。
-2.  **向量嵌入:** 每個文字區塊都會使用 OpenAI 的 `text-embedding-3-small` 模型轉換為向量嵌入。
-3.  **向量儲存:** 嵌入向量儲存在 FAISS 索引 (`vectorDB.faiss`) 中，而對應的文字區塊則儲存在 `textList.json` 中。
-4.  **圖譜建立:** 系統會建立一個知識圖譜 (`graphDB.graphml`)，其中節點是文字區塊，而邊則連接具有高餘弦相似度的區塊，以捕捉它們之間的關係。
-5.  **問答流程:**
-    -   當使用者透過前端提出問題時，問題會被傳送到後端 API。
-    -   後端會為問題建立一個向量嵌入，並使用 FAISS 索引找出最相似的文字區塊。
-    -   接著，它會遍歷知識圖譜以檢索相鄰的區塊，從而獲得額外的上下文。
-    -   這個上下文會與原始問題一起被格式化成一個提示 (prompt)。
-    -   最後，該提示會被傳送到設定好的 LLM (Ollama 或 OpenAI) 以生成回應，並將其串流回傳給使用者。
+1. **資料讀取:** 後端服務讀取文件，並將其文字內容分割成較小的區塊。
+2. **向量嵌入:** 每個區塊都透過 OpenAI 模型轉換為向量嵌入。
+3. **資料儲存:** 建立資料夾，嵌入向量儲存於 FAISS 索引檔 (`<資料名稱>.faiss`)，而原始文字區塊則存放在 `<資料名稱>.json`。
+4. **圖譜建立:** 系統會根據語意相似度建立一個知識圖譜 (`<資料名稱>.graphml`)，用來對應文字區塊之間的關聯。
+5. **檢索與生成:**
+   - 使用者的問題會被轉換成一個向量。
+   - FAISS 索引會找出最相關的文字區塊 (向量搜尋)。
+   - 知識圖譜會被用來尋找與這些區塊相關的鄰近節點，以補充更多上下文 (圖譜搜尋)。
+   - 檢索到的上下文與原始問題會被一同發送到設定好的 LLM (Ollama 或 OpenAI)。
+   - LLM 會生成最終答案，並以串流方式回傳給使用者。
