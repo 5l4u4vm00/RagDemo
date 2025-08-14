@@ -32,7 +32,7 @@ async function confirm() {
       const formData = new FormData()
       formData.append('file', uploadedFile.value as File)
 
-      const response: string[] = await splitTextFromDoc({ maxToken: 60 }, formData)
+      const response: string[] = await splitTextFromDoc({ maxToken: maxTokens.value }, formData)
       splitTexts.value = response
     } else {
       await embeddingChunksStore({ dataName: dataName.value }, splitTexts.value)

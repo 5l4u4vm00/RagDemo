@@ -1,5 +1,5 @@
-<script setup>
-import { ref, nextTick, watch, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, nextTick, watch, onMounted, useTemplateRef } from 'vue'
 import ChatMessage from '@/components/ChatMessage.vue'
 import { askLLaMA, askOpenAI } from '@/api/server/ChatBot'
 import { getModelOptions } from '@/api/server/Options'
@@ -7,6 +7,7 @@ import { useGobalStore } from '@/stores/global'
 import { storeToRefs } from 'pinia'
 
 const { formParams } = storeToRefs(useGobalStore())
+const chatContainer = useTemplateRef('chatContainer')
 const messages = ref([])
 const inputMessage = ref('')
 const isLoading = ref(false)
@@ -22,15 +23,15 @@ async function sendMessage() {
     isLoading.value = true
     try {
       let response = ''
-      if (formParams.value.model.includes('gpt')) {
+      if (formParams.value.model.includes('gpt') && formParams.value.model != 'gpt-oss:20b') {
         response = await askOpenAI(formParams.value)
       } else {
         response = await askLLaMA(formParams.value)
       }
       isLoading.value = false
-      messages.value.push({ sender: 'gemini', text: response })
+      messages.value.push({ sender: formParams.value.model, text: response })
     } catch (e) {
-      messages.value.push({ sender: 'gemini', text: 'Error' })
+      messages.value.push({ sender: formParams.value.model, text: 'Error' })
     }
     isLoading.value = false
   }
@@ -42,6 +43,17 @@ onMounted(() => {
     formParams.value.model = response[2].Value
   })
 })
+
+watch(
+  messages,
+  async () => {
+    await nextTick()
+    if (chatContainer.value) {
+      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+    }
+  },
+  { deep: true },
+)
 </script>
 
 <template>
