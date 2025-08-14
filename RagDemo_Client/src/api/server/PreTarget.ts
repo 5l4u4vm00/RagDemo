@@ -1,5 +1,6 @@
 import type { AxiosPromise } from 'axios'
 import server from '.'
+import type { EmbeddingChunks } from '@/type/embeddingChunks'
 
 export function splitTextFromDoc(params: Object, data: Object): Promise<AxiosPromise<string[]>> {
   return server({
@@ -11,6 +12,6 @@ export function splitTextFromDoc(params: Object, data: Object): Promise<AxiosPro
   })
 }
 
-export function embeddingChunksStore(data: Object) {
-  return server({ url: '/Pretarget/EmbeddingChunksStore', method: 'post', data })
+export function embeddingChunksStore(params: EmbeddingChunks, data: string[]) {
+  return server({ url: '/Pretarget/EmbeddingChunksStore', method: 'post', data, params })
 }

@@ -5,7 +5,7 @@ import { getDataNameList } from '@/api/server/Options'
 import { onMounted, ref } from 'vue'
 import { useGobalStore } from '@/stores/global'
 import { storeToRefs } from 'pinia'
-import { splitTextFromDoc } from '@/api/server/PreTarget'
+import { useRouter } from 'vue-router'
 defineProps({
   isOpen: {
     type: Boolean,
@@ -13,24 +13,17 @@ defineProps({
   },
 })
 
-const { formParams, splitTexts, maxTokens } = storeToRefs(useGobalStore())
-const dataList = ref<string[]>([])
+const router = useRouter()
+const { formParams, uploadedFile, dataName, dataList } = storeToRefs(useGobalStore())
+const { getDataList } = useGobalStore()
 const isSetting = ref<boolean>(false)
 
 onMounted(() => {
-  getDataNameList()
-    .then((response: string[]) => {
-      dataList.value = response
-      formParams.value.dataList.push(dataList.value[0])
-    })
-    .catch((error) => {
-      console.error('Failed to fetch data list:', error)
-    })
+  getDataList()
 })
 
 defineEmits(['close'])
 
-const uploadedFile = ref<File | null>(null)
 function handleUpload() {
   // Create an input element dynamically
   const input = document.createElement('input')
@@ -42,18 +35,20 @@ function handleUpload() {
     if (target.files && target.files.length > 0) {
       uploadedFile.value = target.files[0]
       console.log('File selected:', uploadedFile.value.name)
+      dataName.value = uploadedFile.value.name.split('.')[0]
+      router.push('/Embedding')
 
       // Prepare FormData
-      const formData = new FormData()
-      formData.append('file', uploadedFile.value)
-
-      splitTextFromDoc({ maxToken: 60 }, formData)
-        .then((response: string[]) => {
-          splitTexts.value = response
-        })
-        .catch((e) => {
-          console.error(e)
-        })
+      // const formData = new FormData()
+      // formData.append('file', uploadedFile.value)
+      //
+      // splitTextFromDoc({ maxToken: 60 }, formData)
+      //   .then((response: string[]) => {
+      //     splitTexts.value = response
+      //   })
+      //   .catch((e) => {
+      //     console.error(e)
+      //   })
     }
   }
 
