@@ -1,5 +1,5 @@
 import server from '.'
 
-export function askLLaMA(data) {
+export function askLLaMA(data: Object) {
   return server({ url: '/ChatBot/AskLLaMA', method: 'post', data })
 }

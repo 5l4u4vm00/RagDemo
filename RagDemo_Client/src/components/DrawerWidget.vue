@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import Cross from '@/assets/icon/cross.svg'
+import Gear from '@/assets/icon/gear.svg'
+import { getDataNameList } from '@/api/server/Options'
+import { onMounted, ref } from 'vue'
+import { useGobalStore } from '@/stores/global'
+import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 defineProps({
   isOpen: {
     type: Boolean,
@@ -6,7 +13,47 @@ defineProps({
   },
 })
 
+const router = useRouter()
+const { formParams, uploadedFile, dataName, dataList } = storeToRefs(useGobalStore())
+const { getDataList } = useGobalStore()
+const isSetting = ref<boolean>(false)
+
+onMounted(() => {
+  getDataList()
+})
+
 defineEmits(['close'])
+
+function handleUpload() {
+  // Create an input element dynamically
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.docx,.pdf' // specify allowed file types if needed
+
+  input.onchange = async (event: Event) => {
+    const target = event.target as HTMLInputElement
+    if (target.files && target.files.length > 0) {
+      uploadedFile.value = target.files[0]
+      console.log('File selected:', uploadedFile.value.name)
+      dataName.value = uploadedFile.value.name.split('.')[0]
+      router.push('/Embedding')
+
+      // Prepare FormData
+      // const formData = new FormData()
+      // formData.append('file', uploadedFile.value)
+      //
+      // splitTextFromDoc({ maxToken: 60 }, formData)
+      //   .then((response: string[]) => {
+      //     splitTexts.value = response
+      //   })
+      //   .catch((e) => {
+      //     console.error(e)
+      //   })
+    }
+  }
+
+  input.click() // trigger file selection
+}
 </script>
 
 <template>
@@ -17,49 +64,78 @@ defineEmits(['close'])
     <div
       class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
     >
-      <h2 class="text-lg font-bold">歷史記錄</h2>
+      <h2 class="text-lg font-bold">DataBase</h2>
       <button
         @click="$emit('close')"
-        class="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+        class="p-1 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
+        <img :src="Cross" class="w-6 h-6" style="filter: brightness(0) invert(1)" />
       </button>
     </div>
 
-    <div class="relative flex-1 p-4 overflow-y-auto space-y-2">
-      <div
-        class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
-      >
-        <p class="text-sm font-semibold">對話一</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 truncate">這是第一段對話的簡短摘要...</p>
+    <div class="relative flex-1 p-4 overflow-y-auto space-y-4 vector">
+      <div class="flex flex-col no-wrap gap-4" v-if="!isSetting">
+        <label
+          v-for="dataName in dataList"
+          :key="dataName"
+          class="flex items-center space-x-2 mb-1 cursor-pointer"
+        >
+          <input
+            type="checkbox"
+            :value="dataName"
+            v-model="formParams.dataList"
+            class="form-checkbox text-blue-500"
+          />
+          <span class="text-md">{{ dataName }}</span>
+        </label>
       </div>
-      <div
-        class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
-      >
-        <p class="text-sm font-semibold">關於 Vue 的問題</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-          使用者詢問了 Vue 3 的 Composition API...
-        </p>
+      <div v-else class="flex flex-col no-wrap gap-4 w-full">
+        <label class="flex flex-col items-start space-y-2 mb-1">
+          <span class="text-md">systemMessage :</span>
+          <textarea
+            v-model="formParams.systemMessage"
+            class="w-full border border-gray-300 dark:border-gray-600 rounded-sm form-checkbox text-white"
+          ></textarea>
+        </label>
+        <label class="flex flex-col items-start space-y-2 mb-1">
+          <span class="text-md">Params :</span>
+          <textarea
+            v-model="formParams.finalPrompt"
+            class="w-full border border-gray-300 dark:border-gray-600 rounded-sm form-checkbox text-white"
+          >
+          </textarea>
+        </label>
+        <button
+          @click="
+            () => {
+              isSetting = false
+            }
+          "
+          class="p-2 rounded-md dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+        >
+          Back
+        </button>
       </div>
     </div>
-    <div class="flex justify-end p-4">
+    <div
+      class="flex justify-between items-center p-4 border-t border-gray-200 dark:border-gray-700"
+    >
       <button
+        @click="
+          () => {
+            isSetting = true
+          }
+        "
+        class="p-2 rounded-md dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex items-center space-x-1"
+      >
+        <img :src="Gear" class="w-6 h-6" style="filter: brightness(0) invert(1)" />
+      </button>
+
+      <button
+        @click="handleUpload"
         class="p-2 rounded-md dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
       >
-        上傳檔案
+        Upload File
       </button>
     </div>
   </div>

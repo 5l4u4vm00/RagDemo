@@ -7,14 +7,6 @@ const service = axios.create({
   // 在生產環境中，你可以改為部署後的 API 網址
   // 也可以在 vite.config.js 中設定 proxy
   baseURL: import.meta.env.VITE_API_URL,
-
-  // 設置請求逾時時間，例如 10 秒
-  timeout: 40000,
-
-  // 設置請求頭，例如 Content-Type
-  headers: {
-    'Content-Type': 'application/json',
-  },
 })
 
 // 請求攔截器 (Request Interceptors)

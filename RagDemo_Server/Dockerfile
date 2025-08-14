@@ -4,7 +4,7 @@ WORKDIR /app
 
 # 安裝依賴
 COPY requirement.txt ./
-RUN pip install -r requirement.txt
+RUN pip install --no-cache-dir -r requirement.txt
 
 COPY . .
 
@@ -12,5 +12,5 @@ COPY . .
 EXPOSE 8888
 
 
-# Run with uvicorn
+# Run with python
 CMD ["python", "main.py"]

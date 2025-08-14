@@ -1,38 +1,42 @@
 <script setup>
-import { ref, nextTick, watch } from 'vue'
+import { ref, nextTick, watch, onMounted } from 'vue'
 import ChatMessage from '@/components/ChatMessage.vue'
-import { askLLaMA } from '@/api/server/chat'
+import { askLLaMA } from '@/api/server/ChatBot'
+import { getModelOptions } from '@/api/server/Options'
+import { useGobalStore } from '@/stores/global'
+import { storeToRefs } from 'pinia'
 
+const { formParams } = storeToRefs(useGobalStore())
 const messages = ref([])
 const inputMessage = ref('')
-const selectedMode = ref('vector')
 const isLoading = ref(false)
+const modelList = ref([])
 
 async function sendMessage() {
   if (inputMessage.value.trim() === '') return
   if (!isLoading.value) {
     messages.value.push({ sender: 'user', text: inputMessage.value })
-    const userMessage = inputMessage.value
+    formParams.value.question = inputMessage.value
     inputMessage.value = ''
 
     isLoading.value = true
-    const response = await askLLaMA({ question: userMessage })
+    try {
+      const response = await askLLaMA(formParams.value)
+      isLoading.value = false
+      messages.value.push({ sender: 'gemini', text: response })
+    } catch (e) {
+      messages.value.push({ sender: 'gemini', text: 'Error' })
+    }
     isLoading.value = false
-
-    messages.value.push({ sender: 'gemini', text: response })
   }
 }
 
-watch(
-  messages,
-  async () => {
-    await nextTick()
-    if (chatContainer.value) {
-      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
-    }
-  },
-  { deep: true },
-)
+onMounted(() => {
+  getModelOptions().then((response) => {
+    modelList.value = response
+    formParams.value.model = response[2].Value
+  })
+})
 </script>
 
 <template>
@@ -58,16 +62,22 @@ watch(
     >
       <div class="flex space-x-2">
         <select
-          v-model="selectedMode"
+          v-model="formParams.mode"
           class="p-3 rounded-lg bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="vector">VectorRag</option>
-          <option value="graph">GraphRag</option>
+          <option :value="1">VectorRag</option>
+          <option :value="2">GraphRag</option>
+        </select>
+        <select
+          v-model="formParams.model"
+          class="p-3 rounded-lg bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option v-for="model in modelList" :value="model.Value">{{ model.Label }}</option>
         </select>
         <input
           type="text"
           v-model="inputMessage"
-          placeholder="輸入訊息..."
+          placeholder="Enter message..."
           class="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700"
         />
         <button
@@ -75,14 +85,14 @@ watch(
           class="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           v-if="!isLoading"
         >
-          送出
+          Submit
         </button>
         <div
           type="submit"
           class="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg flex items-center"
           v-else
         >
-          送出
+          Submit
         </div>
       </div>
     </form>
