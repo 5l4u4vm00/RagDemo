@@ -1,6 +1,11 @@
 import os
 import ollama
+from dotenv import load_dotenv
 from DataModels.Models.Option import Option
+
+load_dotenv()
+_openAIKey = os.environ.get("AZURE_OPENAI_KEY")
+_openAIEndpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
 
 
 class OptionService:
@@ -19,6 +24,14 @@ class OptionService:
             )
             for model in models
         ]
+        if _openAIKey and _openAIEndpoint:
+            model_list.extend(
+                [
+                    Option(Value="gpt-4.1", Label="gpt-4.1"),
+                    Option(Value="gpt-4.1-mini", Label="gpt-4.1-mini"),
+                    Option(Value="gpt-4.1-nano", Label="gpt-4.1-nano"),
+                ]
+            )
         return model_list
 
     def GetDataList(self) -> list[str]:
