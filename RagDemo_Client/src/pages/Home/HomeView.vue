@@ -1,7 +1,7 @@
 <script setup>
 import { ref, nextTick, watch, onMounted } from 'vue'
 import ChatMessage from '@/components/ChatMessage.vue'
-import { askLLaMA } from '@/api/server/ChatBot'
+import { askLLaMA, askOpenAI } from '@/api/server/ChatBot'
 import { getModelOptions } from '@/api/server/Options'
 import { useGobalStore } from '@/stores/global'
 import { storeToRefs } from 'pinia'
@@ -21,7 +21,12 @@ async function sendMessage() {
 
     isLoading.value = true
     try {
-      const response = await askLLaMA(formParams.value)
+      let response = ''
+      if (formParams.value.model.includes('gpt')) {
+        response = await askOpenAI(formParams.value)
+      } else {
+        response = await askLLaMA(formParams.value)
+      }
       isLoading.value = false
       messages.value.push({ sender: 'gemini', text: response })
     } catch (e) {
