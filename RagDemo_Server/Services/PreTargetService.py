@@ -79,7 +79,7 @@ class PreTargetService:
     def CreatGraphAndStore(
         chunkTexts: list[str], embeddings: list[list[float]], filePath: str
     ):
-        threshold = 0.65
+        threshold = 0.8
         similarities = cosine_similarity(embeddings)
         G = nx.DiGraph()
         # Add node
