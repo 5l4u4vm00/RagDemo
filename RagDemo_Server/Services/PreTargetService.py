@@ -57,17 +57,26 @@ class PreTargetService:
 
         self.StoreTexts(texts, folderPath + f"{dataName}.json")
 
-        inputs = self._tokenizer(
-            texts, padding=True, max_length=512, truncation=True, return_tensors="pt"
-        )
-        outputs = self._model(**inputs)
-        embeddings = self.AveragePool(
-            outputs.last_hidden_state, inputs["attention_mask"]
-        )
-        embeddings = F.normalize(embeddings, p=2, dim=1).tolist()
+        allEmbeddings: list[list[float]] = []
+        batch: int = 10
+        for i in range(0, len(texts), batch):
+            inputs = self._tokenizer(
+                texts[i : i + batch],
+                padding=True,
+                max_length=512,
+                truncation=True,
+                return_tensors="pt",
+            )
+            outputs = self._model(**inputs)
+            embeddings = self.AveragePool(
+                outputs.last_hidden_state, inputs["attention_mask"]
+            )
+            allEmbeddings.extend(F.normalize(embeddings, p=2, dim=1).tolist())
 
-        self.StoreVectorInfile(embeddings, folderPath + f"{dataName}.faiss")
-        self.CreatGraphAndStore(texts, embeddings, folderPath + f"{dataName}.graphml")
+        self.StoreVectorInfile(allEmbeddings, folderPath + f"{dataName}.faiss")
+        self.CreatGraphAndStore(
+            texts, allEmbeddings, folderPath + f"{dataName}.graphml"
+        )
 
     @staticmethod
     def StoreTexts(texts: list[str], filePath: str):
