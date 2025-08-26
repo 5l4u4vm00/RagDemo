@@ -37,6 +37,8 @@ class PreTargetService:
             texts = self.ReadDocxContent(io.BytesIO(contents))
         elif file.filename.endswith("pdf"):
             texts = self.ReadPdfContent(io.BytesIO(contents))
+        elif file.filename.endswith("cs"):
+            texts = self.ReadCSFile(io.BytesIO(contents))
         else:
             raise ValueError("Error type of the file")
         tokens = self._tokenizer.encode(texts)
@@ -143,4 +145,13 @@ class PreTargetService:
             return "".join(fullText)
         except Exception as ex:
             print(f"Error reading PDF file: {ex}")
+            return None
+
+    @staticmethod
+    def ReadCSFile(IOByteFile: io.BytesIO) -> str | None:
+        try:
+            content = IOByteFile.read().decode("utf-8")
+            return content
+        except Exception as ex:
+            print(f"Error reading CS file: {ex}")
             return None
