@@ -28,7 +28,7 @@ function handleUpload() {
   // Create an input element dynamically
   const input = document.createElement('input')
   input.type = 'file'
-  input.accept = '.docx,.pdf' // specify allowed file types if needed
+  input.accept = '.docx,.pdf,.cs' // specify allowed file types if needed
 
   input.onchange = async (event: Event) => {
     const target = event.target as HTMLInputElement
@@ -37,18 +37,6 @@ function handleUpload() {
       console.log('File selected:', uploadedFile.value.name)
       dataName.value = uploadedFile.value.name.split('.')[0]
       router.push('/Embedding')
-
-      // Prepare FormData
-      // const formData = new FormData()
-      // formData.append('file', uploadedFile.value)
-      //
-      // splitTextFromDoc({ maxToken: 60 }, formData)
-      //   .then((response: string[]) => {
-      //     splitTexts.value = response
-      //   })
-      //   .catch((e) => {
-      //     console.error(e)
-      //   })
     }
   }
 
