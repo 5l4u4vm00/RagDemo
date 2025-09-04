@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import Cross from '@/assets/icon/cross.svg'
 import Gear from '@/assets/icon/gear.svg'
-import { getDataNameList } from '@/api/server/Options'
 import { onMounted, ref } from 'vue'
 import { useGobalStore } from '@/stores/global'
 import { storeToRefs } from 'pinia'
@@ -46,17 +45,12 @@ function handleUpload() {
 
 <template>
   <div
-    class="absolute flex flex-col h-full w-0 bg-white dark:bg-gray-800 shadow-lg transition-transform duration-300 transform"
+    class="absolute flex flex-col h-full w-0 bg-neutral-800 shadow-lg transition-transform duration-300 transform"
     :class="{ '-translate-x-64': !isOpen, 'w-64': isOpen }"
   >
-    <div
-      class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
-    >
+    <div class="p-4 border-b border-neutral-700 flex items-center justify-between">
       <h2 class="text-lg font-bold">DataBase</h2>
-      <button
-        @click="$emit('close')"
-        class="p-1 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700"
-      >
+      <button @click="$emit('close')" class="p-1 rounded-xl hover:bg-neutral-700">
         <img :src="Cross" class="w-6 h-6" style="filter: brightness(0) invert(1)" />
       </button>
     </div>
@@ -82,14 +76,14 @@ function handleUpload() {
           <span class="text-md">systemMessage :</span>
           <textarea
             v-model="formParams.systemMessage"
-            class="w-full border border-gray-300 dark:border-gray-600 rounded-sm form-checkbox text-white"
+            class="w-full border border-neutral-600 rounded-sm form-checkbox text-white"
           ></textarea>
         </label>
         <label class="flex flex-col items-start space-y-2 mb-1">
           <span class="text-md">Params :</span>
           <textarea
             v-model="formParams.finalPrompt"
-            class="w-full border border-gray-300 dark:border-gray-600 rounded-sm form-checkbox text-white"
+            class="w-full border border-neutral-600 rounded-sm form-checkbox text-white"
           >
           </textarea>
         </label>
@@ -99,29 +93,27 @@ function handleUpload() {
               isSetting = false
             }
           "
-          class="p-2 rounded-md dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+          class="p-2 rounded-md bg-neutral-700 hover:bg-neutral-600 cursor-pointer"
         >
           Back
         </button>
       </div>
     </div>
-    <div
-      class="flex justify-between items-center p-4 border-t border-gray-200 dark:border-gray-700"
-    >
+    <div class="flex justify-between items-center p-4 border-t border-neutral-700">
       <button
         @click="
           () => {
             isSetting = true
           }
         "
-        class="p-2 rounded-md dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex items-center space-x-1"
+        class="p-2 rounded-md bg-neutral-700 hover:bg-neutral-600 cursor-pointer flex items-center space-x-1"
       >
         <img :src="Gear" class="w-6 h-6" style="filter: brightness(0) invert(1)" />
       </button>
 
       <button
         @click="handleUpload"
-        class="p-2 rounded-md dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+        class="p-2 rounded-md bg-neutral-700 hover:bg-neutral-600 cursor-pointer"
       >
         Upload File
       </button>

@@ -7,14 +7,11 @@ const { isDrawerOpen } = storeToRefs(useGobalStore())
 </script>
 
 <template>
-  <div class="flex flex-col h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  <div class="flex flex-col h-screen bg-neutral-900 text-gray-100">
     <header
-      class="p-4 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 flex items-center space-x-4"
+      class="p-4 bg-neutral-800 shadow-sm border-b border-gray-700 flex items-center space-x-4"
     >
-      <button
-        @click="isDrawerOpen = !isDrawerOpen"
-        class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
-      >
+      <button @click="isDrawerOpen = !isDrawerOpen" class="p-2 rounded-md hover:bg-gray-700">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           class="h-6 w-6"
