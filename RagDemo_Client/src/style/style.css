@@ -1,3 +1,4 @@
+@import 'github-markdown-css/github-markdown-dark.css';
 @import 'tailwindcss';
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {

@@ -65,12 +65,12 @@ async function confirm() {
             type="number"
             max="512"
             min="10"
-            class="p-2 border border-gray-300 dark:border-gray-600 rounded-sm form-checkbox text-white"
+            class="p-2 border border-gray-600 rounded-sm form-checkbox text-white"
           />
         </label>
         <label class="flex items-start space-x-4 mb-1 cursor-pointer">
           <span class="text-xl">file name</span>
-          <div class="p-2 border border-gray-300 dark:border-gray-600 rounded-sm text-white">
+          <div class="p-2 border border-gray-600 rounded-sm text-white">
             {{ uploadedFile?.name }}
           </div>
         </label>
@@ -82,18 +82,18 @@ async function confirm() {
           <input
             v-model="dataName"
             type="text"
-            class="p-2 flex-1 border border-gray-300 dark:border-gray-600 rounded-sm form-checkbox text-white"
+            class="p-2 flex-1 border border-gray-600 rounded-sm form-checkbox text-white"
           />
         </label>
         <div class="w-full flex flex-row gap-x-1" v-for="(text, index) in splitTexts" :key="index">
           <input
             v-model="splitTexts[index]"
             type="text"
-            class="p-2 flex-1 border border-gray-300 dark:border-gray-600 rounded-sm form-checkbox text-white"
+            class="p-2 flex-1 border border-gray-600 rounded-sm form-checkbox text-white"
           />
           <button
             @click="removeTexts(index)"
-            class="p-2 rounded-md dark:bg-red-700 hover:bg-red-100 dark:hover:bg-red-600 cursor-pointer"
+            class="p-2 rounded-md bg-red-700 hover:bg-red-600 cursor-pointer"
           >
             remove
           </button>
@@ -104,7 +104,7 @@ async function confirm() {
         <button
           @click="cancel"
           :disabled="isLoading"
-          class="p-2 rounded-md dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+          class="p-2 rounded-md bg-gray-700 hover:bg-gray-600 cursor-pointer"
         >
           Cancel
         </button>
@@ -112,14 +112,14 @@ async function confirm() {
           v-if="splitTexts.length"
           @click="previousStep"
           :disabled="isLoading"
-          class="p-2 rounded-md dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+          class="p-2 rounded-md bg-gray-700 hover:bg-gray-600 cursor-pointer"
         >
           Previous step
         </button>
         <button
           @click="confirm"
           :disabled="isLoading"
-          class="p-2 rounded-md dark:bg-blue-700 hover:bg-blue-100 dark:hover:bg-blue-600 cursor-pointer"
+          class="p-2 rounded-md bg-blue-700 hover:bg-blue-600 cursor-pointer"
         >
           Confirm
         </button>

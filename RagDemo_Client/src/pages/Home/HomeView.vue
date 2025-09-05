@@ -66,7 +66,7 @@ watch(
         :sender="message.sender"
       />
       <div v-if="isLoading" class="flex justify-start">
-        <div class="p-3 rounded-xl bg-gray-700 text-gray-100 rounded-bl-none">
+        <div class="p-3 rounded-xl bg-neutral-700 text-neutral-100 rounded-bl-none">
           <img src="@/assets/loading.gif" alt="Gemini is thinking" class="h-6 w-auto" />
         </div>
       </div>
@@ -75,19 +75,19 @@ watch(
   <div class="flex justify-center">
     <form
       @submit.prevent="sendMessage"
-      class="p-4 bg-white w-[60%] rounded-lg mb-6 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
+      class="p-4 w-[60%] rounded-lg mb-6 bg-neutral-800 border-t border-gray-700"
     >
       <div class="flex space-x-2">
         <select
           v-model="formParams.mode"
-          class="p-3 rounded-lg bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="p-3 rounded-lg bg-neutral-700 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option :value="1">VectorRag</option>
           <option :value="2">GraphRag</option>
         </select>
         <select
           v-model="formParams.model"
-          class="p-3 rounded-lg bg-gray-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="p-3 rounded-lg bg-neutral-700 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option v-for="model in modelList" :value="model.Value">{{ model.Label }}</option>
         </select>
@@ -95,7 +95,7 @@ watch(
           type="text"
           v-model="inputMessage"
           placeholder="Enter message..."
-          class="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700"
+          class="flex-1 p-3 border border-neutral-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-neutral-700"
         />
         <button
           type="submit"
@@ -106,7 +106,7 @@ watch(
         </button>
         <div
           type="submit"
-          class="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg flex items-center"
+          class="px-4 py-2 bg-neutral-600 text-white font-semibold rounded-lg flex items-center"
           v-else
         >
           Submit

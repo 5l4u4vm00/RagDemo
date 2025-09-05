@@ -7,11 +7,13 @@ export const useGobalStore = defineStore('global', () => {
   const isDrawerOpen = ref<boolean>(false)
   const formParams = ref<FormParams>({
     question: '',
-    systemMessage: '你是一個市民的好幫手,請使用繁體中文回答',
+    systemMessage:
+      'You are a helpful assistant that formats all responses in Markdown, with proper headings, lists, code blocks, and tables.Format the answer using headings, bullet points, tables when needed, and fenced code blocks with language identifiers. Use LaTeX for math if required.',
     model: null,
     mode: 1,
     dataList: [],
-    finalPrompt: '回答不需使用根據,若無資料可回答"不知道"',
+    finalPrompt:
+      'You do not need repeat the question, and answer header. If no data you can anxwer "I do not know."',
   })
   const uploadedFile = ref<File | null>(null)
   const maxTokens = ref<number>(60)
