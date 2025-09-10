@@ -1,9 +1,9 @@
 import server from '.'
 
-export function askLLaMA(data: Object) {
+export function askLLaMA(data: Object): Promise<string> {
   return server({ url: '/ChatBot/AskLLaMA', method: 'post', data })
 }
 
-export function askOpenAI(data: Object) {
+export function askOpenAI(data: Object): Promise<string> {
   return server({ url: '/ChatBot/AskOpenAI', method: 'post', data })
 }

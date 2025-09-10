@@ -6,7 +6,7 @@ import { getDataNameList } from '@/api/server/Options'
 export const useGobalStore = defineStore('global', () => {
   const isDrawerOpen = ref<boolean>(false)
   const formParams = ref<FormParams>({
-    question: '',
+    questions: [],
     systemMessage:
       'You are a helpful assistant that formats all responses in Markdown, with proper headings, lists, code blocks, and tables.Format the answer using headings, bullet points, tables when needed, and fenced code blocks with language identifiers. Use LaTeX for math if required.',
     model: null,

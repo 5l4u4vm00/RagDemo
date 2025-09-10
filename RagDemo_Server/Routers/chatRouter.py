@@ -18,7 +18,7 @@ async def AskLlama(request: Request) -> str | None:
     - str | None: The model's response, or None if the request fails.
     """
     result = await _services.AskLlama(
-        user_input=request.question,
+        inputs=request.questions,
         systemMassage=request.systemMessage,
         model=request.model,
         finalPrompt=request.finalPrompt,
@@ -41,7 +41,7 @@ def AskOpenAI(request: Request):
     - str | None: The model's response, or None if the request fails.
     """
     result = _services.AskOpenAI(
-        user_input=request.question,
+        inputs=request.questions,
         systemMassage=request.systemMessage,
         model=request.model,
         finalPrompt=request.finalPrompt,

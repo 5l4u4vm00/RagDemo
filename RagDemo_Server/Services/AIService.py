@@ -18,9 +18,6 @@ load_dotenv()
 _openAIKey = os.environ.get("AZURE_OPENAI_KEY")
 _openAIEndpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
 _dataCollectionPath = "./VectorStore/"
-_faissPath = "./VectorStore/vectorDB.faiss"
-_jsonPath = "./VectorStore/textList.json"
-_nxPath = "./VectorStore/graphDB.graphml"
 
 if _openAIKey and _openAIEndpoint:
     _openAIClient = AzureOpenAI(
@@ -37,7 +34,7 @@ class AIService:
 
     async def AskLlama(
         self,
-        user_input: str,
+        inputs: list[ChatCompletionMessageParam],
         systemMassage: str = "",
         model: str = "llama3",
         mode: EMode = EMode.vector,
@@ -49,19 +46,25 @@ class AIService:
         """
         client = ollama.AsyncClient(host="http://host.docker.internal:11434")
 
+        last_input = inputs.pop()["content"]
         prompts = self.SimilarQueryAndReturnPrompts(
-            user_input, top_k=5, mode=mode, dataList=dataList, finalPrompt=finalPrompt
+            last_input,
+            top_k=5,
+            mode=mode,
+            dataList=dataList,
+            finalPrompt=finalPrompt,
         )
         messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": systemMassage}
         ]
+        messages.extend(inputs)
         messages.append({"role": "user", "content": prompts})
         response: ChatResponse = await client.chat(model=model, messages=messages)
         return response.message.content
 
     def AskOpenAI(
         self,
-        user_input: str,
+        inputs: list[ChatCompletionMessageParam],
         systemMassage: str = "",
         model: str = "gpt-4.1",
         mode: EMode = EMode.vector,
@@ -73,12 +76,19 @@ class AIService:
         """
         if not _openAIClient:
             return "Please set the azure openai key and endpoint in .env"
+
+        last_input = inputs.pop()["content"]
         prompts = self.SimilarQueryAndReturnPrompts(
-            user_input, top_k=2, mode=mode, dataList=dataList, finalPrompt=finalPrompt
+            last_input,
+            top_k=5,
+            mode=mode,
+            dataList=dataList,
+            finalPrompt=finalPrompt,
         )
         messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": systemMassage}
         ]
+        messages.extend(inputs)
         messages.append({"role": "user", "content": prompts})
         response = _openAIClient.chat.completions.create(model=model, messages=messages)
         return response.choices[0].message.content
