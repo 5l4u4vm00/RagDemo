@@ -8,32 +8,37 @@ import { storeToRefs } from 'pinia'
 
 const { formParams } = storeToRefs(useGobalStore())
 const chatContainer = useTemplateRef('chatContainer')
-const messages = ref([])
-const inputMessage = ref('')
-const isLoading = ref(false)
-const modelList = ref([])
+const messages = ref<object[]>([])
+const inputMessage = ref<string>('')
+const isLoading = ref<boolean>(false)
+const modelList = ref<string[]>([])
 
 async function sendMessage() {
   if (inputMessage.value.trim() === '') return
   if (!isLoading.value) {
     messages.value.push({ sender: 'user', text: inputMessage.value })
-    formParams.value.question = inputMessage.value
+    if (formParams.value.questions.length > 10) {
+      formParams.value.questions.shift()
+    }
+    formParams.value.questions.push({ role: 'user', content: inputMessage.value })
     inputMessage.value = ''
 
     isLoading.value = true
     try {
-      let response = ''
-      if (formParams.value.model.includes('gpt') && formParams.value.model != 'gpt-oss:20b') {
+      let response: string = ''
+      if (formParams.value.model?.includes('gpt') && formParams.value.model != 'gpt-oss:20b') {
         response = await askOpenAI(formParams.value)
       } else {
         response = await askLLaMA(formParams.value)
       }
-      isLoading.value = false
       messages.value.push({ sender: formParams.value.model, text: response })
+      formParams.value.questions.push({ role: 'assistant', content: response })
     } catch (e) {
       messages.value.push({ sender: formParams.value.model, text: 'Error' })
+      console.error(e)
+    } finally {
+      isLoading.value = false
     }
-    isLoading.value = false
   }
 }
 
