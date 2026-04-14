@@ -18,7 +18,7 @@ def get_pool() -> pool.SimpleConnectionPool:
 
 
 @contextmanager
-def get_conn():C
+def get_conn():
     """Yield a psycopg2 connection from the pool; commit on success, rollback on error."""
     p = get_pool()
     conn = p.getconn()
