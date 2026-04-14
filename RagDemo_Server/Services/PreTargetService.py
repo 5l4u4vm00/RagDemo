@@ -1,29 +1,22 @@
-import json
+import io
 from fastapi import UploadFile, File
 from transformers import AutoTokenizer, AutoModel
 from docx import Document
 import pdfplumber
-import io
 from torch import Tensor
 import torch.nn.functional as F
 from sklearn.metrics.pairwise import cosine_similarity
-import networkx as nx
-import faiss
-import numpy as np
-import os
 
-_dataCollectionPath = "./VectorStore/"
+from Database.db import get_conn
 
 
 class PreTargetService:
     def __init__(
         self,
         model: str = "intfloat/multilingual-e5-large",
-        storeDataPath: str = "./VectorStore/",
     ):
         self._tokenizer = AutoTokenizer.from_pretrained(model)
         self._model = AutoModel.from_pretrained(model)
-        self._storeDataPath = storeDataPath
 
     async def SplitText(
         self, file: UploadFile = File(), maxToken: int = 100
@@ -53,12 +46,6 @@ class PreTargetService:
         return chunks
 
     def EmbeddingTexts(self, texts: list[str], dataName: str):
-        folderPath = _dataCollectionPath + f"{dataName}/"
-        if not os.path.isdir(folderPath):
-            os.mkdir(folderPath)
-
-        self.StoreTexts(texts, folderPath + f"{dataName}.json")
-
         allEmbeddings: list[list[float]] = []
         batch: int = 10
         for i in range(0, len(texts), batch):
@@ -75,45 +62,62 @@ class PreTargetService:
             )
             allEmbeddings.extend(F.normalize(embeddings, p=2, dim=1).tolist())
 
-        self.StoreVectorInfile(allEmbeddings, folderPath + f"{dataName}.faiss")
-        self.CreatGraphAndStore(
-            texts, allEmbeddings, folderPath + f"{dataName}.graphml"
-        )
+        self._StoreToDatabase(texts, allEmbeddings, dataName)
 
-    @staticmethod
-    def StoreTexts(texts: list[str], filePath: str):
-        jsonFile = open(filePath, "w")
-        json.dump(texts, jsonFile)
-        jsonFile.close()
-
-    @staticmethod
-    def CreatGraphAndStore(
-        chunkTexts: list[str], embeddings: list[list[float]], filePath: str
+    def _StoreToDatabase(
+        self,
+        texts: list[str],
+        embeddings: list[list[float]],
+        dataName: str,
     ):
         threshold = 0.8
         similarities = cosine_similarity(embeddings)
-        G = nx.DiGraph()
-        # Add node
-        for i, chunk in enumerate(chunkTexts):
-            G.add_node(i, text=chunk)
 
-        # Add edage
-        for i in range(len(chunkTexts)):
-            for j in range(i + 1, len(chunkTexts)):
-                sim = similarities[i][j]
-                if sim >= threshold:
-                    G.add_edge(i, j, weight=sim)
-        nx.write_graphml(G, filePath)
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                # Upsert dataset row, get its id
+                cur.execute(
+                    """
+                    INSERT INTO datasets (name)
+                    VALUES (%s)
+                    ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+                    RETURNING id;
+                    """,
+                    (dataName,),
+                )
+                dataset_id = cur.fetchone()[0]
 
-    @staticmethod
-    def StoreVectorInfile(embeddings: list[list[float]], filePath: str):
-        dim = len(embeddings[0])
-        index = faiss.IndexFlatL2(dim)
+                # Remove existing data for clean re-embed
+                cur.execute(
+                    "DELETE FROM chunk_edges WHERE dataset_id = %s;", (dataset_id,)
+                )
+                cur.execute(
+                    "DELETE FROM chunks WHERE dataset_id = %s;", (dataset_id,)
+                )
 
-        npEmbeddings = np.array(embeddings).astype("float32")
-        index.add(npEmbeddings)
+                # Insert chunks with embeddings
+                for idx, (text, emb) in enumerate(zip(texts, embeddings)):
+                    cur.execute(
+                        """
+                        INSERT INTO chunks (dataset_id, chunk_idx, text, embedding)
+                        VALUES (%s, %s, %s, %s::vector);
+                        """,
+                        (dataset_id, idx, text, str(emb)),
+                    )
 
-        faiss.write_index(index, filePath)
+                # Insert edges for chunk pairs with cosine similarity >= threshold
+                for i in range(len(texts)):
+                    for j in range(i + 1, len(texts)):
+                        sim = float(similarities[i][j])
+                        if sim >= threshold:
+                            cur.execute(
+                                """
+                                INSERT INTO chunk_edges
+                                    (dataset_id, src_idx, dst_idx, weight)
+                                VALUES (%s, %s, %s, %s);
+                                """,
+                                (dataset_id, i, j, sim),
+                            )
 
     @staticmethod
     def AveragePool(last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:

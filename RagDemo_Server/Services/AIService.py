@@ -1,23 +1,21 @@
 import os
 import ollama
 import faiss
-import json
 import numpy as np
 import networkx as nx
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 from ollama import ChatResponse
 from openai.types.chat.completion_create_params import ChatCompletionMessageParam
-from scipy.stats import f
 from transformers import AutoTokenizer, AutoModel
 import torch.nn.functional as F
 from torch import Tensor
 from DataModels.Enums.EMode import EMode
+from Database.db import get_conn
 
 load_dotenv()
 _openAIKey = os.environ.get("AZURE_OPENAI_KEY")
 _openAIEndpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
-_dataCollectionPath = "./VectorStore/"
 
 if _openAIKey and _openAIEndpoint:
     _openAIClient = AzureOpenAI(
@@ -109,69 +107,83 @@ class AIService:
         prompts = self.BuildPrompt(question, contextChunks, finalPrompt)
         return prompts
 
-    @staticmethod
-    def LoadVectorFile(filePath: str) -> faiss.Index:
-        index = faiss.read_index(filePath)
-        return index
-
     def SearchSimilar(self, question: str, top_k: int = 5, dataList: list[str] = []):
         texts: list[str] = []
         embeddings: list[list[float]] = []
-        for dataName in dataList:
-            folderPath = _dataCollectionPath + dataName
-            jsonFile = open(folderPath + f"/{dataName}.json", "r")
-            texts.extend(json.load(jsonFile))
-            jsonFile.close()
-            index = self.LoadVectorFile(folderPath + f"/{dataName}.faiss")
-            ntotal, d = index.ntotal, index.d
-            recons = np.zeros((ntotal, d), dtype="float32")
-            embeddings.extend(index.reconstruct_n(0, ntotal, recons))
+
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                for dataName in dataList:
+                    cur.execute(
+                        """
+                        SELECT c.text, c.embedding
+                        FROM chunks c
+                        JOIN datasets d ON d.id = c.dataset_id
+                        WHERE d.name = %s
+                        ORDER BY c.chunk_idx;
+                        """,
+                        (dataName,),
+                    )
+                    for text, emb_str in cur.fetchall():
+                        texts.append(text)
+                        embeddings.append(
+                            [float(x) for x in emb_str.strip("[]").split(",")]
+                        )
 
         index = self.CreateFaissIndex(embeddings)
-
         questionVector = np.array(self.EmbeddingTexts(texts=[question])).astype(
             "float32"
         )
-
         distances, indices = index.search(questionVector, k=top_k)
 
-        results = []
-        for idx, dist in zip(indices[0], distances[0]):
-            result_text = texts[idx]
-            results.append(result_text)
-
-        return results
+        return [texts[idx] for idx in indices[0]]
 
     def SearchGraphRag(self, query: str, top_k=2, dataList: list[str] = []):
         embeddings: list[list[float]] = []
         G = nx.DiGraph()
 
-        for dataName in dataList:
-            folderPath = _dataCollectionPath + dataName
-            index = self.LoadVectorFile(folderPath + f"/{dataName}.faiss")
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                global_offset = 0
+                for dataName in dataList:
+                    cur.execute(
+                        """
+                        SELECT c.chunk_idx, c.text, c.embedding
+                        FROM chunks c
+                        JOIN datasets d ON d.id = c.dataset_id
+                        WHERE d.name = %s
+                        ORDER BY c.chunk_idx;
+                        """,
+                        (dataName,),
+                    )
+                    chunk_rows = cur.fetchall()
 
-            # --- Reconstruct embeddings ---
-            ntotal, d = index.ntotal, index.d
-            recons = np.zeros((ntotal, d), dtype="float32")
-            index.reconstruct_n(0, ntotal, recons)
-            embeddings.extend(recons.tolist())
+                    for local_idx, text, emb_str in chunk_rows:
+                        global_node = local_idx + global_offset
+                        embeddings.append(
+                            [float(x) for x in emb_str.strip("[]").split(",")]
+                        )
+                        G.add_node(global_node, text=text)
 
-            # --- Merge graph ---
-            G1 = nx.read_graphml(folderPath + f"/{dataName}.graphml", node_type=int)
+                    cur.execute(
+                        """
+                        SELECT e.src_idx, e.dst_idx, e.weight
+                        FROM chunk_edges e
+                        JOIN datasets d ON d.id = e.dataset_id
+                        WHERE d.name = %s;
+                        """,
+                        (dataName,),
+                    )
+                    for src, dst, weight in cur.fetchall():
+                        G.add_edge(
+                            src + global_offset,
+                            dst + global_offset,
+                            weight=weight,
+                        )
 
-            if len(G.nodes) > 0:
-                max_node = max(G.nodes)
-            else:
-                max_node = -1
+                    global_offset += len(chunk_rows)
 
-            mapping = {n: n + max_node + 1 for n in G1.nodes()}  # keep as int
-            G1 = nx.relabel_nodes(G1, mapping)
-            G = nx.compose(G, G1)
-
-        # --- Create combined FAISS index ---
         index = self.CreateFaissIndex(embeddings)
-
-        # --- Query ---
         queryVector = np.array(self.EmbeddingTexts(texts=[query])).astype("float32")
         distances, indices = index.search(queryVector, k=top_k)
 

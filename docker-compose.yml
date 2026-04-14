@@ -1,4 +1,20 @@
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ragdemo
+      POSTGRES_PASSWORD: ragdemo
+      POSTGRES_DB: ragdemo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ragdemo -d ragdemo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    container_name: ragdemo_postgres
   backend:
     build:
       context: ./RagDemo_Server
@@ -9,6 +25,11 @@ services:
       - "8888:8888"
     volumes:
       - ./RagDemo_Server:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./RagDemo_Server/.env
     container_name: ragdemo_backend
   frontend:
     build:
@@ -22,3 +43,6 @@ services:
       - ./RagDemo_Client:/app
       - /app/node_modules
     container_name: ragdemo-frontend
+
+volumes:
+  pgdata:

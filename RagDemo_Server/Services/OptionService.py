@@ -2,6 +2,7 @@ import os
 import ollama
 from dotenv import load_dotenv
 from DataModels.Models.Option import Option
+from Database.db import get_conn
 
 load_dotenv()
 _openAIKey = os.environ.get("AZURE_OPENAI_KEY")
@@ -41,7 +42,7 @@ class OptionService:
             return model_list
 
     def GetDataList(self) -> list[str]:
-        dataNameList: list[str] = [
-            entry.name for entry in os.scandir("./VectorStore/") if entry.is_dir()
-        ]
-        return dataNameList
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT name FROM datasets ORDER BY name;")
+                return [row[0] for row in cur.fetchall()]

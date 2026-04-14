@@ -25,7 +25,9 @@ export const useGobalStore = defineStore('global', () => {
     getDataNameList()
       .then((response: string[]) => {
         dataList.value = response
-        formParams.value.dataList.push(dataList.value[0])
+        if (formParams.value.dataList.length === 0 && response.length > 0) {
+          formParams.value.dataList.push(response[0])
+        }
       })
       .catch((error) => {
         console.error('Failed to fetch data list:', error)
