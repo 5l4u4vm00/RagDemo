@@ -7,6 +7,7 @@ from Database.db import get_conn
 load_dotenv()
 _openAIKey = os.environ.get("AZURE_OPENAI_KEY")
 _openAIEndpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
+_ollamaHost = os.environ.get("OLLAMA_HOST", "http://host.docker.internal:11434")
 
 
 class OptionService:
@@ -24,7 +25,7 @@ class OptionService:
                 ]
             )
         try:
-            client = ollama.AsyncClient(host="http://host.docker.internal:11434")
+            client = ollama.AsyncClient(host=_ollamaHost)
             response = await client.list()  # returns a dict
             models = response["models"]  # list of dicts
 

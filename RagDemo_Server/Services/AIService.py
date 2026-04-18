@@ -16,6 +16,7 @@ from Database.db import get_conn
 load_dotenv()
 _openAIKey = os.environ.get("AZURE_OPENAI_KEY")
 _openAIEndpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
+_ollamaHost = os.environ.get("OLLAMA_HOST", "http://host.docker.internal:11434")
 
 if _openAIKey and _openAIEndpoint:
     _openAIClient = AzureOpenAI(
@@ -42,7 +43,7 @@ class AIService:
         """
         Ask question to local model
         """
-        client = ollama.AsyncClient(host="http://host.docker.internal:11434")
+        client = ollama.AsyncClient(host=_ollamaHost)
 
         last_input = inputs.pop()["content"]
         prompts = self.SimilarQueryAndReturnPrompts(
