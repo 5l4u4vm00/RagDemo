@@ -2,6 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# Install CPU-only torch first (saves ~2GB vs default CUDA wheel)
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.7.1
+
 # 安裝依賴
 COPY requirement.txt ./
 RUN pip install --no-cache-dir -r requirement.txt
