@@ -45,7 +45,10 @@ async function sendMessage() {
 onMounted(() => {
   getModelOptions().then((response) => {
     modelList.value = response
-    formParams.value.model = response[2].Value
+    const defaultOption = response[2] ?? response[0]
+    if (defaultOption) {
+      formParams.value.model = defaultOption.Value
+    }
   })
 })
 
