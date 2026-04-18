@@ -40,6 +40,7 @@ class OptionService:
             )
             return model_list
         except Exception as e:
+            print(f"[GetModelList] ollama error: {e!r} host={_ollamaHost}")
             return model_list
 
     def GetDataList(self) -> list[str]:
