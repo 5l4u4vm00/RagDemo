@@ -27,7 +27,7 @@ if _openAIKey and _openAIEndpoint:
 
 
 class AIService:
-    def __init__(self, model: str = "intfloat/multilingual-e5-large"):
+    def __init__(self, model: str = "intfloat/multilingual-e5-small"):
         self._tokenizer = AutoTokenizer.from_pretrained(model)
         self._model = AutoModel.from_pretrained(model)
 

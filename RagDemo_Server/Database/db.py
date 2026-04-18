@@ -49,7 +49,7 @@ def init_schema():
                     dataset_id INTEGER NOT NULL REFERENCES datasets(id) ON DELETE CASCADE,
                     chunk_idx  INTEGER NOT NULL,
                     text       TEXT    NOT NULL,
-                    embedding  vector(1024) NOT NULL,
+                    embedding  vector(384) NOT NULL,
                     UNIQUE (dataset_id, chunk_idx)
                 );
             """)

@@ -13,7 +13,7 @@ from Database.db import get_conn
 class PreTargetService:
     def __init__(
         self,
-        model: str = "intfloat/multilingual-e5-large",
+        model: str = "intfloat/multilingual-e5-small",
     ):
         self._tokenizer = AutoTokenizer.from_pretrained(model)
         self._model = AutoModel.from_pretrained(model)

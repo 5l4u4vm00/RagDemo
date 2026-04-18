@@ -12,8 +12,8 @@ RUN pip install --no-cache-dir -r requirement.txt
 # Pre-download embedding model into image so cold starts are fast
 ENV HF_HOME=/app/.cache/huggingface
 RUN python -c "from transformers import AutoTokenizer, AutoModel; \
-    AutoTokenizer.from_pretrained('intfloat/multilingual-e5-large'); \
-    AutoModel.from_pretrained('intfloat/multilingual-e5-large')"
+    AutoTokenizer.from_pretrained('intfloat/multilingual-e5-small'); \
+    AutoModel.from_pretrained('intfloat/multilingual-e5-small')"
 
 COPY . .
 
