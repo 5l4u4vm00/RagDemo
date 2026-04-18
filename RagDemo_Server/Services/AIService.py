@@ -131,6 +131,9 @@ class AIService:
                             [float(x) for x in emb_str.strip("[]").split(",")]
                         )
 
+        if not embeddings:
+            return []
+
         index = self.CreateFaissIndex(embeddings)
         questionVector = np.array(self.EmbeddingTexts(texts=[question])).astype(
             "float32"
@@ -183,6 +186,9 @@ class AIService:
                         )
 
                     global_offset += len(chunk_rows)
+
+        if not embeddings:
+            return []
 
         index = self.CreateFaissIndex(embeddings)
         queryVector = np.array(self.EmbeddingTexts(texts=[query])).astype("float32")
