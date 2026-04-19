@@ -1,48 +1,45 @@
-# RagDemo - Full-Stack RAG Chat Application
+# RagDemo — Full-Stack RAG Chat Application
 
-This project is a full-stack Retrieval-Augmented Generation (RAG) application. It combines a Vue.js frontend with a Python FastAPI backend to create a smart chat assistant that answers questions based on a provided document collection.
+A full-stack Retrieval-Augmented Generation (RAG) application that pairs a Vue 3 frontend with a Python FastAPI backend to answer questions grounded in your own documents.
 
-The application uses vector and graph-based retrieval to deliver accurate, context-aware responses. It supports multiple document formats and can be configured to use either local (Ollama) or remote (OpenAI) Large Language Models.
+Retrieval is backed by **Postgres + pgvector**, with an optional graph-expansion mode that follows similarity edges between chunks. Generation can be served by a local LLM via **Ollama** or by **Azure OpenAI**.
 
 ## Tech Stack
 
-- **Frontend:** Vue.js, Vite, Pinia, Tailwind CSS
-- **Backend:** Python, FastAPI, Ollama, OpenAI
-- **Vector Store:** FAISS for efficient similarity search
-- **Data Processing:** NetworkX for graph-based retrieval
+- **Frontend:** Vue 3, Vite, Pinia, Tailwind CSS, TypeScript
+- **Backend:** Python 3.12, FastAPI, Hugging Face Transformers
+- **Storage / Retrieval:** Postgres 16 with the `pgvector` extension (ivfflat index); NetworkX for in-memory graph traversal at query time
+- **LLMs:** Ollama (local) or Azure OpenAI
 - **Containerization:** Docker, Docker Compose
 
 ## Features
 
-- **Intuitive Chat Interface:** A clean, web-based UI for user interaction.
-- **Multi-Format Support:** Processes both PDF (`.pdf`) and Microsoft Word (`.docx`) files.
-- **Advanced Retrieval:**
-  - **Vector Search:** Uses `multilingual-e5-large` for fast, semantic retrieval.
-  - **Graph Search:** Builds a knowledge graph to find contextually related information.
-- **Flexible LLM Configuration:** Supports both local models via Ollama and the OpenAI API.
-- **Containerized:** The entire application is managed via Docker for easy setup and deployment.
+- **Chat UI** — clean web interface for asking questions over your indexed datasets.
+- **Multi-format ingestion** — supports `.pdf`, `.docx`, and `.cs` source files.
+- **Multilingual embeddings** — `intfloat/multilingual-e5-small` (384-dim, L2-normalized).
+- **Two retrieval modes**
+  - *Vector* — pgvector L2 nearest-neighbour search.
+  - *Graph* — vector hits expanded along precomputed similarity edges (cosine ≥ 0.8).
+- **Pluggable LLM** — switch between local Ollama models and Azure OpenAI per request.
 
 ## Getting Started
 
-Please run the application with Docker.
-Please run the ollama service.
-
 ### Prerequisites
 
-- [Docker](https://www.docker.com/get-started) & [Docker Compose](https://docs.docker.com/compose/install/)
-- An Azure OpenAI API key and endpoint (if using the OpenAI model).
+- [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/install/)
+- [Ollama](https://ollama.com/) running on the host (the backend reaches it via `host.docker.internal:11434`)
+- *(Optional)* Azure OpenAI key + endpoint, if you want to use the OpenAI route
 
 ### Configuration
 
-1. **Clone the Repository:**
+1. Clone the repository:
 
    ```bash
    git clone <repository-url>
    cd RagDemo
    ```
 
-2. **Set Up Environment Variables:**
-   Create a `.env` file in the `RagDemo_Server` directory and add your Azure OpenAI credentials. If you would not use OpenAI model, you can ignore this.
+2. *(Optional)* Create `RagDemo_Server/.env` with your Azure OpenAI credentials. Skip this file if you only plan to use Ollama.
 
    ```env
    # RagDemo_Server/.env
@@ -50,28 +47,34 @@ Please run the ollama service.
    AZURE_OPENAI_ENDPOINT="your-azure-openai-endpoint"
    ```
 
-### Running the Application
+### Running
 
-1. **Launch with Docker Compose:**
-   From the project root, run:
+From the project root:
 
-   ```bash
-   docker-compose up --build
-   ```
+```bash
+docker-compose up --build
+```
 
-2. **Access the Application:**
-   - **Frontend Chat:** `http://localhost:5173`
-   - **Backend API Docs:** `http://localhost:8888/docs`
+This starts three containers:
+
+- `ragdemo_postgres` — Postgres 16 with `pgvector` (port `5432`)
+- `ragdemo_backend` — FastAPI service (port `8888`)
+- `ragdemo-frontend` — Vite dev server (port `5173`)
+
+Then open:
+
+- **Chat UI:** http://localhost:5173
+- **API docs (Swagger):** http://localhost:8888/docs
+
+The backend creates the `vector` extension and required tables on first startup.
 
 ## How It Works
 
-1. **Ingestion:** The backend service reads and splits text from documents into smaller chunks.
-2. **Embedding:** Each chunk is converted into a vector embedding using an multilingual-e5-large model.
-3. **Storage:** Create an data folder. Embeddings are stored in a FAISS vector index (`<your data name>.faiss`), and the raw text is saved in `your data name.json`, finally put these in the data folder.
-4. **Graph Creation:** A knowledge graph (`<your data name>.graphml`) is built to map relationships between text chunks based on semantic similarity.
-5. **Retrieval & Generation:**
-   - A user's question is converted into a vector.
-   - The FAISS index finds the most relevant text chunks (Vector Search).
-   - The knowledge graph is used to find related chunks for additional context (Graph Search).
-   - The retrieved context and the original question are sent to the configured LLM (Ollama or OpenAI).
-   - The LLM generates a response, which is streamed back to the user.
+1. **Chunking** — `PreTargetService.SplitText` reads the uploaded file and tokenizes it into chunks using the `multilingual-e5-small` tokenizer.
+2. **Embedding** — `PreTargetService.EmbeddingTexts` runs the chunks through the e5 model in batches and L2-normalizes the resulting 384-dim vectors.
+3. **Storage** — Each ingestion writes:
+   - one row in `datasets`,
+   - one row per chunk in `chunks` (text + `vector(384)` embedding, indexed with `ivfflat / vector_l2_ops`),
+   - similarity edges (cosine ≥ 0.8) in `chunk_edges` for graph-mode retrieval.
+4. **Retrieval** — At query time `AIService` embeds the question and runs a pgvector L2 search across the selected datasets. In graph mode, the top hits are expanded by following `chunk_edges` neighbours.
+5. **Generation** — Retrieved chunks are stitched into a prompt and sent to either `AskLlama` (Ollama) or `AskOpenAI` (Azure OpenAI). The response is streamed back to the UI.
